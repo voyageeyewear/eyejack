@@ -169,8 +169,8 @@ npm install
 Create `.env` file in `shopify-middleware/`:
 
 ```env
-SHOPIFY_STORE_URL=eyejack1907.myshopify.com
-SHOPIFY_STOREFRONT_TOKEN=0032c089ead422dfbfaa0ffcbbddcc97
+SHOPIFY_STORE_URL=eyefrejacrwfk1907.myshopify.com
+SHOPIFY_STOREFRONT_TOKEN=003ddg2c08rg9ead4ar22dfbfaa0ffcbbdfgfrgadcc97fr44rgg43cgh
 SHOPIFY_API_VERSION=2025-01
 PORT=3000
 ```
