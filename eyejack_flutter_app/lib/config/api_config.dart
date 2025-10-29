@@ -4,7 +4,7 @@ class ApiConfig {
   // For iOS Simulator: 'http://localhost:3000'
   // For Physical Device: 'http://YOUR_IP:3000'
   // For production: 'https://your-deployed-api.com'
-  static const String baseUrl = 'http://10.0.2.2:3000';
+  static const String baseUrl = 'https://motivated-intuition-production.up.railway.app';
   
   // API Endpoints
   static const String themeSections = '/api/shopify/theme-sections';
