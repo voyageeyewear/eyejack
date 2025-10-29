@@ -1,0 +1,39 @@
+# Flutter
+eyejack_flutter_app/.dart_tool/
+eyejack_flutter_app/.flutter-plugins
+eyejack_flutter_app/.flutter-plugins-dependencies
+eyejack_flutter_app/.packages
+eyejack_flutter_app/.pub-cache/
+eyejack_flutter_app/.pub/
+eyejack_flutter_app/build/
+eyejack_flutter_app/fvm/
+eyejack_flutter_app/ios/Pods/
+eyejack_flutter_app/android/app/build/
+
+# Node.js
+shopify-middleware/node_modules/
+shopify-middleware/.env
+shopify-middleware/npm-debug.log
+shopify-middleware/yarn-error.log
+
+# IDE
+.idea/
+.vscode/
+*.iml
+*.ipr
+*.iws
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+/tmp/
+
+# APK files
+*.apk
+
+# Temporary files
+eyejack_new_theme.html
+
