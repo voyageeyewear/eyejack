@@ -76,22 +76,6 @@ exports.fetchThemeSections = async () => {
         }
       },
       {
-        id: 'instagram-stories',
-        type: 'instagram_stories',
-        settings: {
-          title: 'Follow Us on Instagram',
-          subtitle: '@eyejack.in',
-          stories: [
-            { image: 'https://eyejack.in/cdn/shop/files/insta1.jpg', link: 'https://instagram.com/eyejack.in' },
-            { image: 'https://eyejack.in/cdn/shop/files/insta2.jpg', link: 'https://instagram.com/eyejack.in' },
-            { image: 'https://eyejack.in/cdn/shop/files/insta3.jpg', link: 'https://instagram.com/eyejack.in' },
-            { image: 'https://eyejack.in/cdn/shop/files/insta4.jpg', link: 'https://instagram.com/eyejack.in' },
-            { image: 'https://eyejack.in/cdn/shop/files/insta5.jpg', link: 'https://instagram.com/eyejack.in' },
-            { image: 'https://eyejack.in/cdn/shop/files/insta6.jpg', link: 'https://instagram.com/eyejack.in' }
-          ]
-        }
-      },
-      {
         id: 'hero-slider',
         type: 'hero_slider',
         settings: {
@@ -150,25 +134,25 @@ exports.fetchThemeSections = async () => {
               name: 'Men Eyeglasses', 
               label: 'Men', 
               handle: 'eyeglasses',
-              image: allProducts.find(p => p.tags && p.tags.some(t => t.toLowerCase().includes('eyeglass')))?.images[0]?.src || allProducts[0]?.images[0]?.src || ''
+              image: 'https://eyejack.in/cdn/shop/files/im-01.jpg?v=1759574084'
             },
             { 
               name: 'Women Eyeglasses', 
               label: 'Women', 
               handle: 'eyeglasses',
-              image: allProducts.find(p => p.tags && p.tags.some(t => t.toLowerCase().includes('eyeglass')))?.images[1]?.src || allProducts[1]?.images[0]?.src || ''
+              image: 'https://eyejack.in/cdn/shop/files/im-02.jpg?v=1759574105'
             },
             { 
               name: 'Sale Eyeglasses', 
               label: 'Sale', 
               handle: 'sale',
-              image: allProducts.find(p => p.tags && p.tags.some(t => t.toLowerCase().includes('sale')))?.images[0]?.src || allProducts[2]?.images[0]?.src || ''
+              image: 'https://eyejack.in/cdn/shop/files/wolf.webp?v=1759572749'
             },
             { 
               name: 'Unisex Eyeglasses', 
               label: 'Unisex', 
               handle: 'eyeglasses',
-              image: allProducts.find(p => p.tags && p.tags.some(t => t.toLowerCase().includes('eyeglass')))?.images[2]?.src || allProducts[3]?.images[0]?.src || ''
+              image: 'https://eyejack.in/cdn/shop/files/View_all_New_Launch_Unisex_icon-03.png?v=1759574329'
             }
           ]
         }
@@ -183,25 +167,25 @@ exports.fetchThemeSections = async () => {
               name: 'Men Sunglasses', 
               label: 'Men', 
               handle: 'sunglasses',
-              image: allProducts.find(p => p.tags && p.tags.some(t => t.toLowerCase().includes('sunglass')))?.images[0]?.src || allProducts[4]?.images[0]?.src || ''
+              image: 'https://eyejack.in/cdn/shop/files/2502PCL1474-men_3.jpg?v=1748241296'
             },
             { 
               name: 'Women Sunglasses', 
               label: 'Women', 
               handle: 'sunglasses',
-              image: allProducts.find(p => p.tags && p.tags.some(t => t.toLowerCase().includes('sunglass')))?.images[1]?.src || allProducts[5]?.images[0]?.src || ''
+              image: 'https://eyejack.in/cdn/shop/files/2502PCL1474-women_2.jpg?v=1748241296'
             },
             { 
               name: 'Sale Sunglasses', 
               label: 'Sale', 
               handle: 'sale',
-              image: allProducts.find(p => p.tags && p.tags.some(t => t.toLowerCase().includes('sale')))?.images[1]?.src || allProducts[6]?.images[0]?.src || ''
+              image: 'https://eyejack.in/cdn/shop/files/im-07.jpg?v=1759574222'
             },
             { 
               name: 'Unisex Sunglasses', 
               label: 'Unisex', 
               handle: 'sunglasses',
-              image: allProducts.find(p => p.tags && p.tags.some(t => t.toLowerCase().includes('sunglass')))?.images[2]?.src || allProducts[7]?.images[0]?.src || ''
+              image: 'https://eyejack.in/cdn/shop/files/View_all_New_Launch_Unisex_icon-03.png?v=1759574329'
             }
           ]
         }
