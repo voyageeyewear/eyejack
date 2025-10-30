@@ -109,7 +109,11 @@ class Price {
 
   String get formatted {
     final double value = double.tryParse(amount) ?? 0;
-    return '$currencyCode \$${value.toStringAsFixed(2)}';
+    // Use rupee symbol for INR, no decimals for Indian currency
+    if (currencyCode == 'INR') {
+      return '₹${value.toStringAsFixed(0)}';
+    }
+    return '\$${value.toStringAsFixed(2)}';
   }
 }
 

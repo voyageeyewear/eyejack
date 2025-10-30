@@ -1,5 +1,5 @@
 class ApiConfig {
-  // Production Railway URL (works on emulator AND real devices)
+  // Production Railway URL (works everywhere - emulator AND real devices)
   static const String baseUrl = 'https://motivated-intuition-production.up.railway.app';
   
   // API Endpoints
