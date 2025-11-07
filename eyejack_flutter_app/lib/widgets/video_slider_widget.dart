@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:video_player/video_player.dart';
@@ -15,14 +16,47 @@ class VideoSliderWidget extends StatefulWidget {
 }
 
 class _VideoSliderWidgetState extends State<VideoSliderWidget> {
-  final PageController _pageController = PageController();
+  final PageController _pageController = PageController(viewportFraction: 0.9);
   int _currentPage = 0;
   Map<int, VideoPlayerController?> _videoControllers = {};
   Map<int, ChewieController?> _chewieControllers = {};
-  int? _playingIndex;
+  Timer? _autoScrollTimer;
+  bool _isAutoScrolling = true;
+
+  @override
+  void initState() {
+    super.initState();
+    final autoScroll = widget.settings['autoScroll'] as bool? ?? false;
+    if (autoScroll) {
+      _startAutoScroll();
+    }
+    // Pre-initialize first video for autoplay
+    final videos = widget.settings['videos'] as List<dynamic>? ?? [];
+    if (videos.isNotEmpty) {
+      _initializeAndPlayVideo(0, videos[0]['videoUrl'] ?? '');
+    }
+  }
+
+  void _startAutoScroll() {
+    final scrollDuration = widget.settings['scrollDuration'] as int? ?? 5000;
+    _autoScrollTimer = Timer.periodic(Duration(milliseconds: scrollDuration), (timer) {
+      if (!mounted || !_isAutoScrolling) return;
+      
+      final videos = widget.settings['videos'] as List<dynamic>? ?? [];
+      if (videos.isEmpty) return;
+
+      final nextPage = (_currentPage + 1) % videos.length;
+      _pageController.animateToPage(
+        nextPage,
+        duration: const Duration(milliseconds: 800),
+        curve: Curves.easeInOut,
+      );
+    });
+  }
 
   @override
   void dispose() {
+    _autoScrollTimer?.cancel();
     _pageController.dispose();
     for (var controller in _videoControllers.values) {
       controller?.dispose();
@@ -39,13 +73,17 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
     try {
       final controller = VideoPlayerController.networkUrl(Uri.parse(videoUrl));
       await controller.initialize();
+      
+      // Set looping
+      controller.setLooping(true);
 
+      final autoplay = widget.settings['autoplay'] as bool? ?? false;
       final chewieController = ChewieController(
         videoPlayerController: controller,
         autoPlay: false,
-        looping: false,
+        looping: true,
         aspectRatio: 9 / 16,
-        showControls: true,
+        showControls: false,
         placeholder: Container(
           color: Colors.black,
         ),
@@ -59,6 +97,42 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
       }
     } catch (e) {
       debugPrint('❌ Error initializing video: $e');
+    }
+  }
+
+  Future<void> _initializeAndPlayVideo(int index, String videoUrl) async {
+    if (_videoControllers[index] != null) {
+      _videoControllers[index]?.play();
+      return;
+    }
+
+    try {
+      final controller = VideoPlayerController.networkUrl(Uri.parse(videoUrl));
+      await controller.initialize();
+      
+      // Set looping and play
+      controller.setLooping(true);
+
+      final chewieController = ChewieController(
+        videoPlayerController: controller,
+        autoPlay: true,
+        looping: true,
+        aspectRatio: 9 / 16,
+        showControls: false,
+        placeholder: Container(
+          color: Colors.black,
+        ),
+      );
+
+      if (mounted) {
+        setState(() {
+          _videoControllers[index] = controller;
+          _chewieControllers[index] = chewieController;
+        });
+        controller.play();
+      }
+    } catch (e) {
+      debugPrint('❌ Error initializing and playing video: $e');
     }
   }
 
@@ -114,7 +188,7 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
           
           const SizedBox(height: 16),
           
-          // Video slider
+          // Video slider (horizontal scrolling)
           SizedBox(
             height: 450,
             child: PageView.builder(
@@ -123,23 +197,37 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
                 setState(() {
                   _currentPage = index;
                 });
-                // Pause previous video if playing
-                if (_playingIndex != null && _playingIndex != index) {
-                  _videoControllers[_playingIndex!]?.pause();
-                  setState(() {
-                    _playingIndex = null;
-                  });
+                
+                // Pause all other videos
+                for (var i = 0; i < videos.length; i++) {
+                  if (i != index) {
+                    _videoControllers[i]?.pause();
+                  }
+                }
+                
+                // Play current video
+                final video = videos[index];
+                _initializeAndPlayVideo(index, video['videoUrl'] ?? '');
+                
+                // Pre-load next video
+                final nextIndex = (index + 1) % videos.length;
+                if (_videoControllers[nextIndex] == null) {
+                  final nextVideo = videos[nextIndex];
+                  _initializeVideo(nextIndex, nextVideo['videoUrl'] ?? '');
                 }
               },
               itemCount: videos.length,
               itemBuilder: (context, index) {
                 final video = videos[index];
-                return _buildVideoCard(
-                  index,
-                  video['videoUrl'] ?? '',
-                  video['thumbnail'] ?? '',
-                  video['title'] ?? '',
-                  video['link'] ?? '',
+                return Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  child: _buildVideoCard(
+                    index,
+                    video['videoUrl'] ?? '',
+                    video['thumbnail'] ?? '',
+                    video['title'] ?? '',
+                    video['link'] ?? '',
+                  ),
                 );
               },
             ),
@@ -179,121 +267,93 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
     String link,
   ) {
     final isInitialized = _videoControllers[index]?.value.isInitialized ?? false;
-    final isPlaying = _playingIndex == index;
+    final isCurrentPage = _currentPage == index;
 
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
-      child: GestureDetector(
-        onTap: () => _handleVideoTap(index, link),
-        child: Container(
-          decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.1),
-                blurRadius: 10,
-                offset: const Offset(0, 4),
+    return GestureDetector(
+      onTap: () {
+        // Pause auto-scrolling when user taps
+        setState(() {
+          _isAutoScrolling = false;
+        });
+        _handleVideoTap(index, link);
+      },
+      child: Container(
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.2),
+              blurRadius: 10,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(16),
+          child: Stack(
+            fit: StackFit.expand,
+            children: [
+              // Video or thumbnail
+              if (isInitialized && isCurrentPage && _chewieControllers[index] != null)
+                Chewie(controller: _chewieControllers[index]!)
+              else
+                CachedNetworkImage(
+                  imageUrl: thumbnailUrl,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container(
+                    color: Colors.black,
+                    child: const Center(
+                      child: CircularProgressIndicator(
+                        color: Color(0xFF52b1e2),
+                      ),
+                    ),
+                  ),
+                  errorWidget: (context, url, error) => Container(
+                    color: Colors.black,
+                    child: const Icon(
+                      Icons.video_library,
+                      size: 60,
+                      color: Colors.white,
+                    ),
+                  ),
+                ),
+              
+              // Gradient overlay (lighter so video is visible)
+              Container(
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.topCenter,
+                    end: Alignment.bottomCenter,
+                    colors: [
+                      Colors.transparent,
+                      Colors.black.withOpacity(0.5),
+                    ],
+                    stops: const [0.6, 1.0],
+                  ),
+                ),
+              ),
+              
+              // Title at bottom
+              Positioned(
+                bottom: 20,
+                left: 20,
+                right: 20,
+                child: Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    shadows: [
+                      Shadow(
+                        color: Colors.black,
+                        blurRadius: 8,
+                      ),
+                    ],
+                  ),
+                ),
               ),
             ],
-          ),
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(16),
-            child: Stack(
-              fit: StackFit.expand,
-              children: [
-                // Video or thumbnail
-                if (isInitialized && isPlaying && _chewieControllers[index] != null)
-                  Chewie(controller: _chewieControllers[index]!)
-                else
-                  CachedNetworkImage(
-                    imageUrl: thumbnailUrl,
-                    fit: BoxFit.cover,
-                    placeholder: (context, url) => Container(
-                      color: Colors.black,
-                      child: const Center(
-                        child: CircularProgressIndicator(
-                          color: Color(0xFF52b1e2),
-                        ),
-                      ),
-                    ),
-                    errorWidget: (context, url, error) => Container(
-                      color: Colors.black,
-                      child: const Icon(
-                        Icons.video_library,
-                        size: 60,
-                        color: Colors.white,
-                      ),
-                    ),
-                  ),
-                
-                // Overlay gradient
-                Container(
-                  decoration: BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [
-                        Colors.transparent,
-                        Colors.black.withOpacity(0.7),
-                      ],
-                      stops: const [0.5, 1.0],
-                    ),
-                  ),
-                ),
-                
-                // Play button (only if not playing)
-                if (!isPlaying)
-                  Center(
-                    child: GestureDetector(
-                      onTap: () async {
-                        if (!isInitialized) {
-                          await _initializeVideo(index, videoUrl);
-                        }
-                        if (mounted) {
-                          setState(() {
-                            _playingIndex = index;
-                          });
-                          _videoControllers[index]?.play();
-                        }
-                      },
-                      child: Container(
-                        width: 80,
-                        height: 80,
-                        decoration: BoxDecoration(
-                          color: Colors.white.withOpacity(0.9),
-                          shape: BoxShape.circle,
-                        ),
-                        child: const Icon(
-                          Icons.play_arrow,
-                          size: 50,
-                          color: Color(0xFF52b1e2),
-                        ),
-                      ),
-                    ),
-                  ),
-                
-                // Title at bottom
-                Positioned(
-                  bottom: 20,
-                  left: 20,
-                  right: 20,
-                  child: Text(
-                    title,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 20,
-                      fontWeight: FontWeight.bold,
-                      shadows: [
-                        Shadow(
-                          color: Colors.black,
-                          blurRadius: 8,
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              ],
-            ),
           ),
         ),
       ),

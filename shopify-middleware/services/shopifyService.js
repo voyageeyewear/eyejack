@@ -231,25 +231,40 @@ exports.fetchThemeSections = async () => {
         type: 'video_slider',
         settings: {
           title: 'SHOP BY VIDEO',
-          autoplay: false,
+          autoplay: true,
+          loop: true,
+          autoScroll: true,
+          scrollDuration: 5000,
           videos: [
             {
-              videoUrl: 'https://cdn.shopify.com/videos/c/o/v/7efdcf899c844767b8731446460d3bca.mp4',
+              videoUrl: 'https://cdn.shopify.com/videos/c/o/v/e0e1269320dc42e099e89020cfe0d789.mp4',
               thumbnail: 'https://eyejack.in/cdn/shop/files/2502PCL1474-women_2.jpg?v=1748241296',
-              title: 'Sunglasses',
+              title: 'Eyewear Collection',
+              link: 'https://eyejack.in/collections/all'
+            },
+            {
+              videoUrl: 'https://cdn.shopify.com/videos/c/o/v/6bab26bb066640ee88e75fbdcde5d938.mp4',
+              thumbnail: 'https://eyejack.in/cdn/shop/files/im-02.jpg?v=1759574105',
+              title: 'Featured Styles',
               link: 'https://eyejack.in/collections/sunglasses'
             },
             {
-              videoUrl: 'https://cdn.shopify.com/videos/c/o/v/3f15c9a81cd04925874a15cff12c3dc1.mp4',
-              thumbnail: 'https://eyejack.in/cdn/shop/files/im-02.jpg?v=1759574105',
-              title: 'Eyeglasses',
+              videoUrl: 'https://cdn.shopify.com/videos/c/o/v/1e69a10818ff424cace3b25ead46d028.mp4',
+              thumbnail: 'https://eyejack.in/cdn/shop/files/im-01.jpg?v=1759574084',
+              title: 'New Arrivals',
+              link: 'https://eyejack.in/collections/new-arrivals'
+            },
+            {
+              videoUrl: 'https://cdn.shopify.com/videos/c/o/v/93372000dd3043eebccffffc21930874.mp4',
+              thumbnail: 'https://eyejack.in/cdn/shop/files/wolf.webp?v=1759572749',
+              title: 'Premium Collection',
               link: 'https://eyejack.in/collections/eyeglasses'
             },
             {
-              videoUrl: 'https://cdn.shopify.com/videos/c/o/v/d8b7e5c6f4a3b2d1e0f9c8b7a6d5e4f3.mp4',
-              thumbnail: 'https://eyejack.in/cdn/shop/files/im-01.jpg?v=1759574084',
-              title: 'New Collection',
-              link: 'https://eyejack.in/collections/new-arrivals'
+              videoUrl: 'https://cdn.shopify.com/videos/c/o/v/a47919d1f45942d8b0a517811908ae37.mp4',
+              thumbnail: 'https://eyejack.in/cdn/shop/files/im-07.jpg?v=1759574222',
+              title: 'Trending Now',
+              link: 'https://eyejack.in/collections/sale'
             }
           ]
         }
