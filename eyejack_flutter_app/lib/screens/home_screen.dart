@@ -113,49 +113,55 @@ class _HomeScreenState extends State<HomeScreen> {
     );
   }
 
+  Widget _buildCustomAppBar(BuildContext context) {
+    return Container(
+      color: Colors.black,
+      child: SafeArea(
+        bottom: false,
+        child: Row(
+          children: [
+            IconButton(
+              icon: const Icon(Icons.menu, color: Colors.white),
+              onPressed: () => Scaffold.of(context).openDrawer(),
+            ),
+            Expanded(
+              child: Center(
+                child: Image.network(
+                  'https://eyejack.in/cdn/shop/files/colored-logo.png',
+                  height: 32,
+                  fit: BoxFit.contain,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Text(
+                      'Eyejack',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+            IconButton(
+              icon: const Icon(Icons.search, color: Colors.white),
+              onPressed: () {
+                Navigator.pushNamed(context, '/search');
+              },
+            ),
+            IconButton(
+              icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
+              onPressed: _showCartDrawer,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        backgroundColor: Colors.black,
-        elevation: 0,
-        leading: Builder(
-          builder: (context) => IconButton(
-            icon: const Icon(Icons.menu, color: Colors.white),
-            onPressed: () => Scaffold.of(context).openDrawer(),
-          ),
-        ),
-        title: Center(
-          child: Image.network(
-            'https://eyejack.in/cdn/shop/files/colored-logo.png',
-            height: 32,
-            fit: BoxFit.contain,
-            errorBuilder: (context, error, stackTrace) {
-              return const Text(
-                'Eyejack',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              );
-            },
-          ),
-        ),
-        centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.search, color: Colors.white),
-            onPressed: () {
-              Navigator.pushNamed(context, '/search');
-            },
-          ),
-          IconButton(
-            icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
-            onPressed: _showCartDrawer,
-          ),
-        ],
-      ),
       drawer: Drawer(
         child: ListView(
           padding: EdgeInsets.zero,
@@ -253,14 +259,38 @@ class _HomeScreenState extends State<HomeScreen> {
             );
           }
 
+          // Separate announcement bars from other sections
+          final announcementBars = themeData.layout
+              .where((section) => section.type == 'announcement_bars')
+              .toList();
+          final otherSections = themeData.layout
+              .where((section) => section.type != 'announcement_bars')
+              .toList();
+
           return RefreshIndicator(
             onRefresh: () => shopProvider.fetchThemeSections(),
-            child: ListView.builder(
-              itemCount: themeData.layout.length,
-              itemBuilder: (context, index) {
-                final section = themeData.layout[index];
-                return SectionRenderer(section: section);
-              },
+            child: CustomScrollView(
+              slivers: [
+                // 1. Announcement bars at the very top
+                ...announcementBars.map((section) => SliverToBoxAdapter(
+                      child: SectionRenderer(section: section),
+                    )),
+                
+                // 2. Custom header (AppBar)
+                SliverToBoxAdapter(
+                  child: _buildCustomAppBar(context),
+                ),
+                
+                // 3. All other sections
+                SliverList(
+                  delegate: SliverChildBuilderDelegate(
+                    (context, index) {
+                      return SectionRenderer(section: otherSections[index]);
+                    },
+                    childCount: otherSections.length,
+                  ),
+                ),
+              ],
             ),
           );
         },

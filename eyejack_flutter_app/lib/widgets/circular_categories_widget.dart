@@ -18,14 +18,19 @@ class CircularCategoriesWidget extends StatelessWidget {
       color: Colors.white,
       padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 16),
       child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: categories.map((category) {
-          return _buildCircularCategory(
-            context,
-            category['name'] ?? '',
-            category['handle'] ?? '',
-            category['image'] ?? '',
-            category['badge'] as String?,
+          return Expanded(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+              child: _buildCircularCategory(
+                context,
+                category['name'] ?? '',
+                category['handle'] ?? '',
+                category['image'] ?? '',
+                category['badge'] as String?,
+              ),
+            ),
           );
         }).toList(),
       ),
@@ -153,20 +158,16 @@ class CircularCategoriesWidget extends StatelessWidget {
           
           const SizedBox(height: 8),
           
-          // Category name
-          SizedBox(
-            width: 70,
-            child: Text(
-              name,
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-              style: const TextStyle(
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-                color: Colors.black87,
-                height: 1.2,
-              ),
+          // Category name (single line, no wrap)
+          Text(
+            name,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.visible,
+            style: const TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.w600,
+              color: Colors.black87,
             ),
           ),
         ],
