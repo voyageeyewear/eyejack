@@ -17,78 +17,124 @@ class VideoSliderWidget extends StatefulWidget {
 
 class _VideoSliderWidgetState extends State<VideoSliderWidget> {
   final ScrollController _scrollController = ScrollController();
-  Map<int, VideoPlayerController?> _videoControllers = {};
-  Map<int, ChewieController?> _chewieControllers = {};
+  final Map<int, VideoPlayerController> _videoControllers = {};
+  final Map<int, ChewieController> _chewieControllers = {};
 
   @override
   void initState() {
     super.initState();
-    // Initialize ALL videos at once so they all play simultaneously
+    
+    final videos = widget.settings['videos'] as List<dynamic>? ?? [];
+    debugPrint('========================================');
+    debugPrint('🎬 VIDEO SLIDER WIDGET INITIALIZED');
+    debugPrint('📊 Total videos to load: ${videos.length}');
+    debugPrint('========================================');
+    
+    // Initialize ALL videos at once
     _initializeAllVideos();
   }
 
   void _initializeAllVideos() {
     final videos = widget.settings['videos'] as List<dynamic>? ?? [];
     
-    debugPrint('🎥 Initializing ${videos.length} videos to play simultaneously');
+    if (videos.isEmpty) {
+      debugPrint('⚠️  WARNING: No videos found in settings!');
+      return;
+    }
+    
+    debugPrint('🎥 Starting to initialize ${videos.length} videos simultaneously...');
     
     for (var i = 0; i < videos.length; i++) {
-      final videoUrl = videos[i]['videoUrl'] ?? '';
-      if (videoUrl.isNotEmpty) {
-        _initializeAndPlayVideo(i, videoUrl);
+      final video = videos[i];
+      final videoUrl = video['videoUrl'] as String? ?? '';
+      final title = video['title'] as String? ?? 'Video $i';
+      
+      debugPrint('---');
+      debugPrint('🎬 Video $i: $title');
+      debugPrint('🔗 URL: $videoUrl');
+      
+      if (videoUrl.isEmpty) {
+        debugPrint('❌ SKIP: Video $i has no URL');
+        continue;
       }
+      
+      _initializeVideo(i, videoUrl, title);
+    }
+  }
+
+  Future<void> _initializeVideo(int index, String videoUrl, String title) async {
+    try {
+      debugPrint('⏳ Initializing video $index ($title)...');
+      
+      final controller = VideoPlayerController.networkUrl(
+        Uri.parse(videoUrl),
+        videoPlayerOptions: VideoPlayerOptions(
+          mixWithOthers: true,  // Allow multiple videos
+          allowBackgroundPlayback: false,
+        ),
+      );
+
+      // Store controller before initialization
+      _videoControllers[index] = controller;
+      
+      await controller.initialize();
+      
+      debugPrint('✅ Video $index initialized successfully!');
+      debugPrint('   Duration: ${controller.value.duration}');
+      debugPrint('   Size: ${controller.value.size.width}x${controller.value.size.height}');
+      
+      // Configure video
+      await controller.setLooping(true);
+      await controller.setVolume(0.0);  // Muted
+      
+      // Create Chewie controller
+      final chewieController = ChewieController(
+        videoPlayerController: controller,
+        autoPlay: true,
+        looping: true,
+        aspectRatio: 250 / 400,
+        showControls: false,
+        allowFullScreen: false,
+        allowMuting: false,
+        showControlsOnInitialize: false,
+      );
+      
+      _chewieControllers[index] = chewieController;
+      
+      // Start playing
+      await controller.play();
+      debugPrint('▶️  Video $index is now PLAYING!');
+      
+      if (mounted) {
+        setState(() {});
+      }
+      
+    } catch (e, stackTrace) {
+      debugPrint('❌ ERROR initializing video $index: $e');
+      debugPrint('Stack trace: $stackTrace');
     }
   }
 
   @override
   void dispose() {
+    debugPrint('🗑️  Disposing Video Slider Widget...');
     _scrollController.dispose();
-    for (var controller in _videoControllers.values) {
-      controller?.dispose();
+    
+    for (var entry in _videoControllers.entries) {
+      debugPrint('   Disposing video ${entry.key}');
+      entry.value.dispose();
     }
-    for (var controller in _chewieControllers.values) {
-      controller?.dispose();
+    
+    for (var entry in _chewieControllers.entries) {
+      entry.value.dispose();
     }
+    
     super.dispose();
   }
 
-  Future<void> _initializeAndPlayVideo(int index, String videoUrl) async {
-    if (_videoControllers[index] != null) {
-      _videoControllers[index]?.play();
-      return;
-    }
-
-    try {
-      final controller = VideoPlayerController.networkUrl(Uri.parse(videoUrl));
-      await controller.initialize();
-      
-      // Set looping, mute, and play immediately
-      controller.setLooping(true);
-      controller.setVolume(0.0);  // Mute video
-      controller.play();  // Start playing immediately
-
-      final chewieController = ChewieController(
-        videoPlayerController: controller,
-        autoPlay: true,
-        looping: true,
-        aspectRatio: 250 / 400,  // width/height = 250/400
-        showControls: false,
-      );
-
-      if (mounted) {
-        setState(() {
-          _videoControllers[index] = controller;
-          _chewieControllers[index] = chewieController;
-        });
-        
-        debugPrint('✅ Video $index initialized and playing simultaneously');
-      }
-    } catch (e) {
-      debugPrint('❌ Error initializing video $index: $e');
-    }
-  }
-
   void _handleVideoTap(int index, String link) {
+    debugPrint('👆 Video $index tapped, link: $link');
+    
     if (link.contains('/collections/')) {
       final handle = link.split('/collections/').last.split('/').first;
       final collectionName = handle
@@ -114,10 +160,15 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
 
   @override
   Widget build(BuildContext context) {
-    final title = widget.settings['title'] ?? 'Shop By Video';
     final videos = widget.settings['videos'] as List<dynamic>? ?? [];
 
-    if (videos.isEmpty) return const SizedBox.shrink();
+    if (videos.isEmpty) {
+      debugPrint('⚠️  No videos to display');
+      return const SizedBox.shrink();
+    }
+
+    debugPrint('🎨 Building video slider with ${videos.length} videos');
+    debugPrint('   Initialized: ${_videoControllers.length} controllers');
 
     return Container(
       color: Colors.white,
@@ -125,13 +176,13 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title - "Shop By Video" - same size as other sections
+          // Title - same size as other sections
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
               'Shop By Video',
               style: const TextStyle(
-                fontSize: 20,  // Reduced to match other sections
+                fontSize: 20,  // Matches other sections
                 fontWeight: FontWeight.bold,
                 color: Colors.black,
               ),
@@ -140,7 +191,7 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
           
           const SizedBox(height: 16),
           
-          // Horizontal scrolling list - ALL videos play simultaneously
+          // Horizontal scrolling list
           SizedBox(
             height: 400,
             child: ListView.builder(
@@ -152,16 +203,12 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
                 final video = videos[index];
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
-                  child: SizedBox(
-                    width: 250,  // Fixed width
-                    height: 400,  // Fixed height
-                    child: _buildVideoCard(
-                      index,
-                      video['videoUrl'] ?? '',
-                      video['thumbnail'] ?? '',
-                      video['title'] ?? '',
-                      video['link'] ?? '',
-                    ),
+                  child: _buildVideoCard(
+                    index,
+                    video['videoUrl'] ?? '',
+                    video['thumbnail'] ?? '',
+                    video['title'] ?? '',
+                    video['link'] ?? '',
                   ),
                 );
               },
@@ -179,12 +226,17 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
     String title,
     String link,
   ) {
-    final isInitialized = _videoControllers[index]?.value.isInitialized ?? false;
+    final controller = _videoControllers[index];
+    final chewieController = _chewieControllers[index];
+    final isInitialized = controller?.value.isInitialized ?? false;
 
     return GestureDetector(
       onTap: () => _handleVideoTap(index, link),
       child: Container(
+        width: 250,
+        height: 400,
         decoration: BoxDecoration(
+          color: Colors.black,
           borderRadius: BorderRadius.circular(16),
           boxShadow: [
             BoxShadow(
@@ -199,22 +251,41 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // Video - plays automatically when initialized
-              if (isInitialized && _chewieControllers[index] != null)
+              // Video player
+              if (isInitialized && chewieController != null)
                 FittedBox(
-                  fit: BoxFit.cover,  // Cover to prevent stretching
+                  fit: BoxFit.cover,
                   child: SizedBox(
-                    width: _videoControllers[index]!.value.size.width,
-                    height: _videoControllers[index]!.value.size.height,
-                    child: Chewie(controller: _chewieControllers[index]!),
+                    width: controller!.value.size.width,
+                    height: controller.value.size.height,
+                    child: Chewie(controller: chewieController),
                   ),
                 )
               else
+                // Loading state
                 Container(
                   color: Colors.black,
+                  child: Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const CircularProgressIndicator(
+                          color: Colors.white,
+                        ),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Loading video $index...',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
                 ),
               
-              // Gradient overlay (lighter so video is visible)
+              // Gradient overlay
               Container(
                 decoration: BoxDecoration(
                   gradient: LinearGradient(
@@ -229,7 +300,7 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
                 ),
               ),
               
-              // Title at bottom
+              // Title
               Positioned(
                 bottom: 20,
                 left: 20,
@@ -249,6 +320,25 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
                   ),
                 ),
               ),
+              
+              // Debug indicator (shows if video is playing)
+              if (isInitialized && controller!.value.isPlaying)
+                Positioned(
+                  top: 10,
+                  right: 10,
+                  child: Container(
+                    padding: const EdgeInsets.all(6),
+                    decoration: BoxDecoration(
+                      color: Colors.green,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Icon(
+                      Icons.play_arrow,
+                      color: Colors.white,
+                      size: 16,
+                    ),
+                  ),
+                ),
             ],
           ),
         ),
