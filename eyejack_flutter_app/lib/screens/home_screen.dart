@@ -116,45 +116,43 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget _buildCustomAppBar(BuildContext context) {
     return Container(
       color: Colors.black,
-      child: SafeArea(
-        bottom: false,
-        child: Row(
-          children: [
-            IconButton(
-              icon: const Icon(Icons.menu, color: Colors.white),
-              onPressed: () => Scaffold.of(context).openDrawer(),
-            ),
-            Expanded(
-              child: Center(
-                child: Image.network(
-                  'https://eyejack.in/cdn/shop/files/colored-logo.png',
-                  height: 32,
-                  fit: BoxFit.contain,
-                  errorBuilder: (context, error, stackTrace) {
-                    return const Text(
-                      'Eyejack',
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    );
-                  },
-                ),
+      height: 56,
+      child: Row(
+        children: [
+          IconButton(
+            icon: const Icon(Icons.menu, color: Colors.white),
+            onPressed: () => Scaffold.of(context).openDrawer(),
+          ),
+          Expanded(
+            child: Center(
+              child: Image.network(
+                'https://eyejack.in/cdn/shop/files/colored-logo.png',
+                height: 32,
+                fit: BoxFit.contain,
+                errorBuilder: (context, error, stackTrace) {
+                  return const Text(
+                    'Eyejack',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  );
+                },
               ),
             ),
-            IconButton(
-              icon: const Icon(Icons.search, color: Colors.white),
-              onPressed: () {
-                Navigator.pushNamed(context, '/search');
-              },
-            ),
-            IconButton(
-              icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
-              onPressed: _showCartDrawer,
-            ),
-          ],
-        ),
+          ),
+          IconButton(
+            icon: const Icon(Icons.search, color: Colors.white),
+            onPressed: () {
+              Navigator.pushNamed(context, '/search');
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
+            onPressed: _showCartDrawer,
+          ),
+        ],
       ),
     );
   }
@@ -271,9 +269,12 @@ class _HomeScreenState extends State<HomeScreen> {
             onRefresh: () => shopProvider.fetchThemeSections(),
             child: CustomScrollView(
               slivers: [
-                // 1. Announcement bars at the very top
-                ...announcementBars.map((section) => SliverToBoxAdapter(
-                      child: SectionRenderer(section: section),
+                // 1. Announcement bars - sticky at the top
+                ...announcementBars.map((section) => SliverPersistentHeader(
+                      pinned: true,
+                      delegate: _StickyAnnouncementDelegate(
+                        child: SectionRenderer(section: section),
+                      ),
                     )),
                 
                 // 2. Custom header (AppBar)
@@ -296,6 +297,29 @@ class _HomeScreenState extends State<HomeScreen> {
         },
       ),
     );
+  }
+}
+
+// Delegate for sticky announcement bar
+class _StickyAnnouncementDelegate extends SliverPersistentHeaderDelegate {
+  final Widget child;
+
+  _StickyAnnouncementDelegate({required this.child});
+
+  @override
+  double get minExtent => 32.0; // Height of announcement bar + safe area
+
+  @override
+  double get maxExtent => 32.0 + MediaQueryData.fromView(WidgetsBinding.instance.platformDispatcher.views.first).padding.top;
+
+  @override
+  Widget build(BuildContext context, double shrinkOffset, bool overlapsContent) {
+    return child;
+  }
+
+  @override
+  bool shouldRebuild(covariant SliverPersistentHeaderDelegate oldDelegate) {
+    return true;
   }
 }
 

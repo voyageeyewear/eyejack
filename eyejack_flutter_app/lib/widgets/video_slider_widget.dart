@@ -16,8 +16,8 @@ class VideoSliderWidget extends StatefulWidget {
 }
 
 class _VideoSliderWidgetState extends State<VideoSliderWidget> {
-  // Adjusted viewport fraction to better fit 150px width videos
-  final PageController _pageController = PageController(viewportFraction: 0.45);
+  // Adjusted viewport fraction to better fit 250px width videos
+  final PageController _pageController = PageController(viewportFraction: 0.7);
   int _currentPage = 0;
   Map<int, VideoPlayerController?> _videoControllers = {};
   Map<int, ChewieController?> _chewieControllers = {};
@@ -73,19 +73,17 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
       final controller = VideoPlayerController.networkUrl(Uri.parse(videoUrl));
       await controller.initialize();
       
-      // Set looping
+      // Set looping and mute
       controller.setLooping(true);
+      controller.setVolume(0.0);  // Mute video
 
       final autoplay = widget.settings['autoplay'] as bool? ?? false;
       final chewieController = ChewieController(
         videoPlayerController: controller,
         autoPlay: false,
         looping: true,
-        aspectRatio: 150 / 255,  // width/height = 150/255
+        aspectRatio: 250 / 255,  // width/height = 250/255
         showControls: false,
-        placeholder: Container(
-          color: Colors.black,
-        ),
       );
 
       if (mounted) {
@@ -109,18 +107,16 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
       final controller = VideoPlayerController.networkUrl(Uri.parse(videoUrl));
       await controller.initialize();
       
-      // Set looping and play
+      // Set looping, mute, and play
       controller.setLooping(true);
+      controller.setVolume(0.0);  // Mute video
 
       final chewieController = ChewieController(
         videoPlayerController: controller,
         autoPlay: true,
         looping: true,
-        aspectRatio: 150 / 255,  // width/height = 150/255
+        aspectRatio: 250 / 255,  // width/height = 250/255
         showControls: false,
-        placeholder: Container(
-          color: Colors.black,
-        ),
       );
 
       if (mounted) {
@@ -178,7 +174,7 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
             child: Text(
               title,
               style: const TextStyle(
-                fontSize: 22,
+                fontSize: 24,
                 fontWeight: FontWeight.bold,
                 color: Colors.black,
               ),
@@ -221,7 +217,7 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
                 return Padding(
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: SizedBox(
-                    width: 150,  // Fixed width
+                    width: 250,  // Fixed width changed to 250px
                     height: 255,  // Fixed height
                     child: _buildVideoCard(
                       index,
@@ -296,29 +292,12 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // Video or thumbnail
+              // Video only - no thumbnail
               if (isInitialized && isCurrentPage && _chewieControllers[index] != null)
                 Chewie(controller: _chewieControllers[index]!)
               else
-                CachedNetworkImage(
-                  imageUrl: thumbnailUrl,
-                  fit: BoxFit.cover,
-                  placeholder: (context, url) => Container(
-                    color: Colors.black,
-                    child: const Center(
-                      child: CircularProgressIndicator(
-                        color: Color(0xFF52b1e2),
-                      ),
-                    ),
-                  ),
-                  errorWidget: (context, url, error) => Container(
-                    color: Colors.black,
-                    child: const Icon(
-                      Icons.video_library,
-                      size: 60,
-                      color: Colors.white,
-                    ),
-                  ),
+                Container(
+                  color: Colors.black,
                 ),
               
               // Gradient overlay (lighter so video is visible)
