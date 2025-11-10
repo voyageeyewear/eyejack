@@ -1,0 +1,143 @@
+{% schema %}
+{
+  "name": "Video Slideshow",
+  "max_blocks": 5,
+  "settings": [
+    {
+      "type": "text",
+      "id": "section_heading",
+      "label": "Section Heading",
+      "default": "Video Slideshow"
+    },
+    {
+      "type": "range",
+      "id": "slide_duration",
+      "label": "Slide Duration (seconds)",
+      "min": 2,
+      "max": 10,
+      "step": 1,
+      "default": 5
+    }
+  ],
+  "blocks": [
+    {
+      "type": "video_slide",
+      "name": "Video Slide",
+      "settings": [
+        {
+          "type": "header",
+          "content": "Mobile Video"
+        },
+        {
+          "type": "text",
+          "id": "mobile_video_url",
+          "label": "Mobile Video URL",
+          "info": "Upload your MP4 file in Settings > Files and paste the URL here."
+        },
+        {
+          "type": "header",
+          "content": "Desktop Video"
+        },
+        {
+          "type": "text",
+          "id": "desktop_video_url",
+          "label": "Desktop Video URL",
+          "info": "Upload your MP4 file in Settings > Files and paste the URL here."
+        }
+      ]
+    }
+  ],
+  "presets": [
+    {
+      "name": "Video Slideshow",
+      "category": "Video",
+      "blocks": [
+        {
+          "type": "video_slide"
+        },
+        {
+          "type": "video_slide"
+        }
+      ]
+    }
+  ]
+}
+{% endschema %}
+
+<style>
+  .video-slideshow {
+    position: relative;
+    width: 100vw;
+    overflow: hidden;
+  }
+
+  .video-slide {
+    display: none;
+    width: 100%;
+    height: auto;
+  }
+
+  .video-slide.active {
+    display: block;
+  }
+
+  .video-slide video {
+    width: 100%;
+    height: auto;
+  }
+
+  /* Hide desktop video on mobile */
+  .desktop-video {
+    display: none;
+  }
+
+  /* Hide mobile video on desktop */
+  .mobile-video {
+    display: none;
+  }
+
+  /* Show mobile video on mobile devices */
+  @media only screen and (max-width: 767px) {
+    .mobile-video {
+      display: block;
+    }
+  }
+
+  /* Show desktop video on desktop devices */
+  @media only screen and (min-width: 768px) {
+    .desktop-video {
+      display: block;
+    }
+  }
+</style>
+
+<div class="video-slideshow">
+  <h2>{{ section.settings.section_heading }}</h2>
+  {% for block in section.blocks %}
+    <div class="video-slide {% if forloop.first %}active{% endif %}" data-index="{{ forloop.index0 }}">
+      <video autoplay muted loop playsinline class="mobile-video">
+        <source src="{{ block.settings.mobile_video_url }}" type="video/mp4">
+        Your browser does not support the video tag.
+      </video>
+      <video autoplay muted loop playsinline class="desktop-video">
+        <source src="{{ block.settings.desktop_video_url }}" type="video/mp4">
+        Your browser does not support the video tag.
+      </video>
+    </div>
+  {% endfor %}
+</div>
+
+<script>
+  // Slideshow functionality
+  const slides = document.querySelectorAll('.video-slide');
+  let currentSlide = 0;
+  const slideDuration = {{ section.settings.slide_duration }} * 1000;
+
+  function showNextSlide() {
+    slides[currentSlide].classList.remove('active');
+    currentSlide = (currentSlide + 1) % slides.length;
+    slides[currentSlide].classList.add('active');
+  }
+
+  setInterval(showNextSlide, slideDuration);
+</script>
