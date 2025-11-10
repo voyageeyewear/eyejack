@@ -16,7 +16,7 @@ class CircularCategoriesWidget extends StatelessWidget {
 
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.symmetric(vertical: 30, horizontal: 16),  // More vertical padding for full circles
+      padding: const EdgeInsets.only(left: 16, right: 16, top: 12, bottom: 12),  // Minimal padding
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: categories.map((category) {
@@ -155,7 +155,7 @@ class CircularCategoriesWidget extends StatelessWidget {
             ],
           ),
           
-          const SizedBox(height: 8),
+          const SizedBox(height: 4),
           
           // Category name (single line, no wrap)
           Text(
