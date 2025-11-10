@@ -14,6 +14,8 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> {
   VideoPlayerController? _videoController;
   bool _videoInitialized = false;
+  bool _showSkipButton = false;
+  Timer? _skipButtonTimer;
   
   // Splash video URL
   final String _splashVideoUrl = 'https://cdn.shopify.com/videos/c/o/v/6bab26bb066640ee88e75fbdcde5d938.mp4';
@@ -22,6 +24,32 @@ class _SplashScreenState extends State<SplashScreen> {
   void initState() {
     super.initState();
     _initializeVideo();
+    _startSkipButtonTimer();
+  }
+  
+  void _startSkipButtonTimer() {
+    // Show skip button after 5 seconds
+    _skipButtonTimer = Timer(const Duration(seconds: 5), () {
+      if (mounted) {
+        setState(() {
+          _showSkipButton = true;
+        });
+      }
+    });
+  }
+  
+  void _navigateToHome() {
+    if (mounted) {
+      Navigator.of(context).pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) => widget.nextScreen,
+          transitionsBuilder: (context, animation, secondaryAnimation, child) {
+            return FadeTransition(opacity: animation, child: child);
+          },
+          transitionDuration: const Duration(milliseconds: 500),
+        ),
+      );
+    }
   }
   
   Future<void> _initializeVideo() async {
@@ -43,40 +71,21 @@ class _SplashScreenState extends State<SplashScreen> {
       _videoController!.addListener(() {
         if (_videoController!.value.position >= _videoController!.value.duration) {
           // Video finished, navigate to home
-          if (mounted) {
-            Navigator.of(context).pushReplacement(
-              PageRouteBuilder(
-                pageBuilder: (context, animation, secondaryAnimation) => widget.nextScreen,
-                transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                  return FadeTransition(opacity: animation, child: child);
-                },
-                transitionDuration: const Duration(milliseconds: 500),
-              ),
-            );
-          }
+          _navigateToHome();
         }
       });
     } catch (e) {
       debugPrint('Error initializing splash video: $e');
       // If video fails, navigate after 3 seconds
       Timer(const Duration(seconds: 3), () {
-        if (mounted) {
-          Navigator.of(context).pushReplacement(
-            PageRouteBuilder(
-              pageBuilder: (context, animation, secondaryAnimation) => widget.nextScreen,
-              transitionsBuilder: (context, animation, secondaryAnimation, child) {
-                return FadeTransition(opacity: animation, child: child);
-              },
-              transitionDuration: const Duration(milliseconds: 500),
-            ),
-          );
-        }
+        _navigateToHome();
       });
     }
   }
 
   @override
   void dispose() {
+    _skipButtonTimer?.cancel();
     _videoController?.dispose();
     super.dispose();
   }
@@ -101,6 +110,49 @@ class _SplashScreenState extends State<SplashScreen> {
           else
             Container(
               color: Colors.black,
+            ),
+          
+          // Skip button at top right (appears after 5 seconds)
+          if (_showSkipButton)
+            Positioned(
+              top: 50,
+              right: 20,
+              child: GestureDetector(
+                onTap: _navigateToHome,
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                  decoration: BoxDecoration(
+                    color: Colors.white.withOpacity(0.9),
+                    borderRadius: BorderRadius.circular(25),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 8,
+                        offset: const Offset(0, 2),
+                      ),
+                    ],
+                  ),
+                  child: const Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      Text(
+                        'Skip',
+                        style: TextStyle(
+                          color: Colors.black,
+                          fontSize: 16,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      SizedBox(width: 6),
+                      Icon(
+                        Icons.arrow_forward,
+                        color: Colors.black,
+                        size: 18,
+                      ),
+                    ],
+                  ),
+                ),
+              ),
             ),
           
           // Logo and tagline at bottom
