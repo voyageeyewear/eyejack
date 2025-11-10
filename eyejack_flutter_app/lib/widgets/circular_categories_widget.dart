@@ -29,20 +29,29 @@ class _CircularCategoriesWidgetState extends State<CircularCategoriesWidget> {
       final category = categories[i];
       final type = category['type'] as String? ?? 'image';
       final videoUrl = category['video'] as String? ?? '';
+      final handle = category['handle'] as String? ?? '';
       
-      if (type == 'video' && videoUrl.isNotEmpty) {
+      debugPrint('🎥 Category $i: name=${category['name']}, type=$type, video=$videoUrl');
+      
+      if (type == 'video' && videoUrl.isNotEmpty && handle.isNotEmpty) {
+        debugPrint('🎬 Initializing video for: $handle');
         final controller = VideoPlayerController.networkUrl(Uri.parse(videoUrl));
+        
+        // Store controller immediately so it can be accessed
+        _videoControllers[handle] = controller;
+        
         controller.initialize().then((_) {
+          debugPrint('✅ Video initialized successfully for: $handle');
           if (mounted) {
             controller.setLooping(true);
             controller.setVolume(0.0); // Muted
             controller.play();
+            debugPrint('▶️ Video playing for: $handle');
             setState(() {});
           }
         }).catchError((error) {
-          debugPrint('Error initializing video for category $i: $error');
+          debugPrint('❌ Error initializing video for $handle: $error');
         });
-        _videoControllers[category['handle']] = controller;
       }
     }
   }
