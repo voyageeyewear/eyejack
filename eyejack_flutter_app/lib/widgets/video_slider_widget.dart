@@ -16,7 +16,8 @@ class VideoSliderWidget extends StatefulWidget {
 }
 
 class _VideoSliderWidgetState extends State<VideoSliderWidget> {
-  final ScrollController _scrollController = ScrollController();
+  final PageController _pageController = PageController(viewportFraction: 0.7);
+  int _currentPage = 0;
   final Map<int, VideoPlayerController> _videoControllers = {};
   final Map<int, ChewieController> _chewieControllers = {};
 
@@ -25,69 +26,59 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
     super.initState();
     
     final videos = widget.settings['videos'] as List<dynamic>? ?? [];
-    debugPrint('========================================');
-    debugPrint('🎬 VIDEO SLIDER WIDGET INITIALIZED');
-    debugPrint('📊 Total videos to load: ${videos.length}');
-    debugPrint('========================================');
+    debugPrint('🎬 VIDEO SLIDER: Initializing with ${videos.length} videos');
     
-    // Initialize ALL videos at once
-    _initializeAllVideos();
+    // Only initialize and play the FIRST video
+    if (videos.isNotEmpty) {
+      _initializeAndPlayVideo(0);
+    }
   }
 
-  void _initializeAllVideos() {
-    final videos = widget.settings['videos'] as List<dynamic>? ?? [];
+  @override
+  void dispose() {
+    debugPrint('🗑️ Disposing video controllers');
+    _pageController.dispose();
     
-    if (videos.isEmpty) {
-      debugPrint('⚠️  WARNING: No videos found in settings!');
+    for (var controller in _videoControllers.values) {
+      controller.dispose();
+    }
+    
+    for (var controller in _chewieControllers.values) {
+      controller.dispose();
+    }
+    
+    super.dispose();
+  }
+
+  Future<void> _initializeAndPlayVideo(int index) async {
+    final videos = widget.settings['videos'] as List<dynamic>? ?? [];
+    if (index >= videos.length) return;
+    
+    // If already initialized, just play it
+    if (_videoControllers.containsKey(index)) {
+      _videoControllers[index]?.play();
+      debugPrint('▶️ Playing existing video $index');
       return;
     }
     
-    debugPrint('🎥 Starting to initialize ${videos.length} videos simultaneously...');
+    final video = videos[index];
+    final videoUrl = video['videoUrl'] as String? ?? '';
     
-    for (var i = 0; i < videos.length; i++) {
-      final video = videos[i];
-      final videoUrl = video['videoUrl'] as String? ?? '';
-      final title = video['title'] as String? ?? 'Video $i';
-      
-      debugPrint('---');
-      debugPrint('🎬 Video $i: $title');
-      debugPrint('🔗 URL: $videoUrl');
-      
-      if (videoUrl.isEmpty) {
-        debugPrint('❌ SKIP: Video $i has no URL');
-        continue;
-      }
-      
-      _initializeVideo(i, videoUrl, title);
+    if (videoUrl.isEmpty) {
+      debugPrint('❌ Video $index has no URL');
+      return;
     }
-  }
-
-  Future<void> _initializeVideo(int index, String videoUrl, String title) async {
+    
     try {
-      debugPrint('⏳ Initializing video $index ($title)...');
+      debugPrint('⏳ Initializing video $index: $videoUrl');
       
-      final controller = VideoPlayerController.networkUrl(
-        Uri.parse(videoUrl),
-        videoPlayerOptions: VideoPlayerOptions(
-          mixWithOthers: true,  // Allow multiple videos
-          allowBackgroundPlayback: false,
-        ),
-      );
-
-      // Store controller before initialization
-      _videoControllers[index] = controller;
+      final controller = VideoPlayerController.networkUrl(Uri.parse(videoUrl));
       
       await controller.initialize();
       
-      debugPrint('✅ Video $index initialized successfully!');
-      debugPrint('   Duration: ${controller.value.duration}');
-      debugPrint('   Size: ${controller.value.size.width}x${controller.value.size.height}');
-      
-      // Configure video
       await controller.setLooping(true);
-      await controller.setVolume(0.0);  // Muted
+      await controller.setVolume(0.0);
       
-      // Create Chewie controller
       final chewieController = ChewieController(
         videoPlayerController: controller,
         autoPlay: true,
@@ -95,46 +86,56 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
         aspectRatio: 250 / 400,
         showControls: false,
         allowFullScreen: false,
-        allowMuting: false,
         showControlsOnInitialize: false,
       );
       
-      _chewieControllers[index] = chewieController;
-      
-      // Start playing
-      await controller.play();
-      debugPrint('▶️  Video $index is now PLAYING!');
-      
       if (mounted) {
-        setState(() {});
+        setState(() {
+          _videoControllers[index] = controller;
+          _chewieControllers[index] = chewieController;
+        });
+        
+        await controller.play();
+        debugPrint('✅ Video $index initialized and PLAYING');
       }
       
-    } catch (e, stackTrace) {
+    } catch (e) {
       debugPrint('❌ ERROR initializing video $index: $e');
-      debugPrint('Stack trace: $stackTrace');
     }
   }
 
-  @override
-  void dispose() {
-    debugPrint('🗑️  Disposing Video Slider Widget...');
-    _scrollController.dispose();
+  void _onPageChanged(int index) {
+    setState(() {
+      _currentPage = index;
+    });
     
-    for (var entry in _videoControllers.entries) {
-      debugPrint('   Disposing video ${entry.key}');
-      entry.value.dispose();
+    debugPrint('📄 Page changed to $index');
+    
+    final videos = widget.settings['videos'] as List<dynamic>? ?? [];
+    
+    // Pause ALL other videos
+    for (var i = 0; i < videos.length; i++) {
+      if (i != index) {
+        _videoControllers[i]?.pause();
+        debugPrint('⏸️ Paused video $i');
+      }
     }
     
-    for (var entry in _chewieControllers.entries) {
-      entry.value.dispose();
+    // Play current video (initialize if needed)
+    _initializeAndPlayVideo(index);
+    
+    // Pre-load next video
+    if (index + 1 < videos.length) {
+      _initializeAndPlayVideo(index + 1);
     }
     
-    super.dispose();
+    // Pre-load previous video
+    if (index - 1 >= 0) {
+      _initializeAndPlayVideo(index - 1);
+    }
   }
 
   void _handleVideoTap(int index, String link) {
-    debugPrint('👆 Video $index tapped, link: $link');
-    
     if (link.contains('/collections/')) {
       final handle = link.split('/collections/').last.split('/').first;
       final collectionName = handle
@@ -163,12 +164,9 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
     final videos = widget.settings['videos'] as List<dynamic>? ?? [];
 
     if (videos.isEmpty) {
-      debugPrint('⚠️  No videos to display');
+      debugPrint('⚠️ No videos to display');
       return const SizedBox.shrink();
     }
-
-    debugPrint('🎨 Building video slider with ${videos.length} videos');
-    debugPrint('   Initialized: ${_videoControllers.length} controllers');
 
     return Container(
       color: Colors.white,
@@ -182,7 +180,7 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
             child: Text(
               'Shop By Video',
               style: const TextStyle(
-                fontSize: 20,  // Matches other sections
+                fontSize: 20,
                 fontWeight: FontWeight.bold,
                 color: Colors.black,
               ),
@@ -191,13 +189,12 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
           
           const SizedBox(height: 16),
           
-          // Horizontal scrolling list
+          // Video slider with PageView (ONE video plays at a time)
           SizedBox(
             height: 400,
-            child: ListView.builder(
-              controller: _scrollController,
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 8),
+            child: PageView.builder(
+              controller: _pageController,
+              onPageChanged: _onPageChanged,
               itemCount: videos.length,
               itemBuilder: (context, index) {
                 final video = videos[index];
@@ -214,6 +211,28 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
               },
             ),
           ),
+          
+          // Page indicators
+          if (videos.length > 1)
+            Padding(
+              padding: const EdgeInsets.only(top: 16),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: List.generate(videos.length, (index) {
+                  return Container(
+                    width: _currentPage == index ? 24 : 8,
+                    height: 8,
+                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                    decoration: BoxDecoration(
+                      color: _currentPage == index
+                          ? const Color(0xFF52b1e2)
+                          : Colors.grey[300],
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                  );
+                }),
+              ),
+            ),
         ],
       ),
     );
@@ -229,6 +248,7 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
     final controller = _videoControllers[index];
     final chewieController = _chewieControllers[index];
     final isInitialized = controller?.value.isInitialized ?? false;
+    final isCurrentPage = _currentPage == index;
 
     return GestureDetector(
       onTap: () => _handleVideoTap(index, link),
@@ -251,8 +271,8 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // Video player
-              if (isInitialized && chewieController != null)
+              // Video player (only shows if this is the current page)
+              if (isInitialized && isCurrentPage && chewieController != null)
                 FittedBox(
                   fit: BoxFit.cover,
                   child: SizedBox(
@@ -261,28 +281,22 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
                     child: Chewie(controller: chewieController),
                   ),
                 )
+              else if (thumbnailUrl.isNotEmpty)
+                // Show thumbnail for non-current pages
+                CachedNetworkImage(
+                  imageUrl: thumbnailUrl,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container(
+                    color: Colors.black,
+                  ),
+                  errorWidget: (context, url, error) => Container(
+                    color: Colors.black,
+                  ),
+                )
               else
-                // Loading state
+                // Black background
                 Container(
                   color: Colors.black,
-                  child: Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const CircularProgressIndicator(
-                          color: Colors.white,
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Loading video $index...',
-                          style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 12,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
                 ),
               
               // Gradient overlay
@@ -321,8 +335,8 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
                 ),
               ),
               
-              // Debug indicator (shows if video is playing)
-              if (isInitialized && controller!.value.isPlaying)
+              // Play indicator (only on current playing video)
+              if (isInitialized && isCurrentPage && controller!.value.isPlaying)
                 Positioned(
                   top: 10,
                   right: 10,
@@ -330,7 +344,7 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
                     padding: const EdgeInsets.all(6),
                     decoration: BoxDecoration(
                       color: Colors.green,
-                      borderRadius: BorderRadius.circular(12),
+                      shape: BoxShape.circle,
                     ),
                     child: const Icon(
                       Icons.play_arrow,
