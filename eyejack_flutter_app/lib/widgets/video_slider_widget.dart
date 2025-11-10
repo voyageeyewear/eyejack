@@ -1,6 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:video_player/video_player.dart';
+import 'package:cached_network_image/cached_network_image.dart';
 import '../models/collection_model.dart';
 import '../screens/collection_screen.dart';
 
@@ -163,6 +164,7 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
               controller: _pageController,
               onPageChanged: _onPageChanged,
               itemCount: videos.length,
+              padEnds: false,  // Remove white space at start
               itemBuilder: (context, index) {
                 final video = videos[index];
                 final controller = _controllers[index];
@@ -170,7 +172,10 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
                 final isActive = index == _currentIndex;
                 
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8),
+                  padding: EdgeInsets.only(
+                    left: index == 0 ? 16 : 8,  // First video aligned to left
+                    right: 8,
+                  ),
                   child: _VideoCard(
                     video: video,
                     controller: controller,
@@ -225,6 +230,7 @@ class _VideoCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final title = video['title'] as String? ?? '';
     final link = video['link'] as String? ?? '';
+    final thumbnail = video['thumbnail'] as String? ?? '';
     final isReady = controller?.value.isInitialized == true;
     
     return GestureDetector(
@@ -247,7 +253,16 @@ class _VideoCard extends StatelessWidget {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // Video player
+              // Thumbnail (always shown as background)
+              if (thumbnail.isNotEmpty)
+                CachedNetworkImage(
+                  imageUrl: thumbnail,
+                  fit: BoxFit.cover,
+                  placeholder: (context, url) => Container(color: Colors.black),
+                  errorWidget: (context, url, error) => Container(color: Colors.black),
+                ),
+              
+              // Video player (on top of thumbnail when ready)
               if (isActive && isReady && controller != null)
                 FittedBox(
                   fit: BoxFit.cover,
@@ -257,17 +272,15 @@ class _VideoCard extends StatelessWidget {
                     child: VideoPlayer(controller!),
                   ),
                 )
-              else
+              else if (isInitializing)
                 Container(
-                  color: Colors.black,
-                  child: isInitializing
-                      ? const Center(
-                          child: CircularProgressIndicator(
-                            color: Colors.white,
-                            strokeWidth: 2,
-                          ),
-                        )
-                      : null,
+                  color: Colors.black.withOpacity(0.3),
+                  child: const Center(
+                    child: CircularProgressIndicator(
+                      color: Colors.white,
+                      strokeWidth: 2,
+                    ),
+                  ),
                 ),
               
               // Gradient
