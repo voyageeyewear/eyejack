@@ -16,60 +16,33 @@ class VideoSliderWidget extends StatefulWidget {
 }
 
 class _VideoSliderWidgetState extends State<VideoSliderWidget> {
-  // Adjusted viewport fraction to better fit 250px width videos
-  final PageController _pageController = PageController(viewportFraction: 0.7);
-  int _currentPage = 0;
+  final ScrollController _scrollController = ScrollController();
   Map<int, VideoPlayerController?> _videoControllers = {};
   Map<int, ChewieController?> _chewieControllers = {};
-  Timer? _autoScrollTimer;
-  bool _isAutoScrolling = true;
 
   @override
   void initState() {
     super.initState();
-    // Pre-initialize first video for autoplay
-    final videos = widget.settings['videos'] as List<dynamic>? ?? [];
-    if (videos.isNotEmpty) {
-      _initializeAndPlayVideo(0, videos[0]['videoUrl'] ?? '');
-    }
+    // Initialize ALL videos at once so they all play simultaneously
+    _initializeAllVideos();
   }
 
-  void _startAutoScrollAfterFirstVideo() {
-    // Start auto-scroll only after first video completes
-    if (_videoControllers[0] != null) {
-      final firstController = _videoControllers[0]!;
-      
-      // Add listener to detect first video completion
-      firstController.addListener(() {
-        if (firstController.value.position >= firstController.value.duration - const Duration(milliseconds: 500)) {
-          // First video almost complete, start auto-scroll
-          if (_autoScrollTimer == null && mounted) {
-            _autoScrollTimer = Timer.periodic(const Duration(seconds: 10), (timer) {
-              if (!mounted || !_isAutoScrolling) {
-                timer.cancel();
-                return;
-              }
-              
-              final videos = widget.settings['videos'] as List<dynamic>? ?? [];
-              if (videos.isEmpty) return;
-
-              final nextPage = (_currentPage + 1) % videos.length;
-              _pageController.animateToPage(
-                nextPage,
-                duration: const Duration(milliseconds: 800),
-                curve: Curves.easeInOut,
-              );
-            });
-          }
-        }
-      });
+  void _initializeAllVideos() {
+    final videos = widget.settings['videos'] as List<dynamic>? ?? [];
+    
+    debugPrint('🎥 Initializing ${videos.length} videos to play simultaneously');
+    
+    for (var i = 0; i < videos.length; i++) {
+      final videoUrl = videos[i]['videoUrl'] ?? '';
+      if (videoUrl.isNotEmpty) {
+        _initializeAndPlayVideo(i, videoUrl);
+      }
     }
   }
 
   @override
   void dispose() {
-    _autoScrollTimer?.cancel();
-    _pageController.dispose();
+    _scrollController.dispose();
     for (var controller in _videoControllers.values) {
       controller?.dispose();
     }
@@ -79,43 +52,9 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
     super.dispose();
   }
 
-  Future<void> _initializeVideo(int index, String videoUrl) async {
-    if (_videoControllers[index] != null) return;
-
-    try {
-      final controller = VideoPlayerController.networkUrl(Uri.parse(videoUrl));
-      await controller.initialize();
-      
-      // Set looping and mute
-      controller.setLooping(true);
-      controller.setVolume(0.0);  // Mute video
-
-      final autoplay = widget.settings['autoplay'] as bool? ?? false;
-      final chewieController = ChewieController(
-        videoPlayerController: controller,
-        autoPlay: false,
-        looping: true,
-        aspectRatio: 250 / 400,  // width/height = 250/400
-        showControls: false,
-      );
-
-      if (mounted) {
-        setState(() {
-          _videoControllers[index] = controller;
-          _chewieControllers[index] = chewieController;
-        });
-      }
-    } catch (e) {
-      debugPrint('❌ Error initializing video: $e');
-    }
-  }
-
   Future<void> _initializeAndPlayVideo(int index, String videoUrl) async {
     if (_videoControllers[index] != null) {
       _videoControllers[index]?.play();
-      if (index == 0 && _autoScrollTimer == null) {
-        _startAutoScrollAfterFirstVideo();
-      }
       return;
     }
 
@@ -123,9 +62,10 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
       final controller = VideoPlayerController.networkUrl(Uri.parse(videoUrl));
       await controller.initialize();
       
-      // Set looping, mute, and play
+      // Set looping, mute, and play immediately
       controller.setLooping(true);
       controller.setVolume(0.0);  // Mute video
+      controller.play();  // Start playing immediately
 
       final chewieController = ChewieController(
         videoPlayerController: controller,
@@ -140,10 +80,11 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
           _videoControllers[index] = controller;
           _chewieControllers[index] = chewieController;
         });
-        controller.play();
+        
+        debugPrint('✅ Video $index initialized and playing simultaneously');
       }
     } catch (e) {
-      debugPrint('❌ Error initializing and playing video: $e');
+      debugPrint('❌ Error initializing video $index: $e');
     }
   }
 
@@ -184,13 +125,13 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Title - "Shop By Video" (not uppercase)
+          // Title - "Shop By Video" - same size as other sections
           Padding(
             padding: const EdgeInsets.symmetric(horizontal: 16),
             child: Text(
               'Shop By Video',
               style: const TextStyle(
-                fontSize: 24,
+                fontSize: 20,  // Reduced to match other sections
                 fontWeight: FontWeight.bold,
                 color: Colors.black,
               ),
@@ -199,35 +140,13 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
           
           const SizedBox(height: 16),
           
-          // Video slider (horizontal scrolling) with increased height to 400px
+          // Horizontal scrolling list - ALL videos play simultaneously
           SizedBox(
             height: 400,
-            child: PageView.builder(
-              controller: _pageController,
-              padEnds: false,  // Remove space before first video
-              onPageChanged: (index) {
-                setState(() {
-                  _currentPage = index;
-                });
-                
-                // Pause all other videos
-                for (var i = 0; i < videos.length; i++) {
-                  if (i != index) {
-                    _videoControllers[i]?.pause();
-                  }
-                }
-                
-                // Play current video
-                final video = videos[index];
-                _initializeAndPlayVideo(index, video['videoUrl'] ?? '');
-                
-                // Pre-load next video
-                final nextIndex = (index + 1) % videos.length;
-                if (_videoControllers[nextIndex] == null) {
-                  final nextVideo = videos[nextIndex];
-                  _initializeVideo(nextIndex, nextVideo['videoUrl'] ?? '');
-                }
-              },
+            child: ListView.builder(
+              controller: _scrollController,
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 8),
               itemCount: videos.length,
               itemBuilder: (context, index) {
                 final video = videos[index];
@@ -235,7 +154,7 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
                   padding: const EdgeInsets.symmetric(horizontal: 8),
                   child: SizedBox(
                     width: 250,  // Fixed width
-                    height: 400,  // Increased height to prevent compression
+                    height: 400,  // Fixed height
                     child: _buildVideoCard(
                       index,
                       video['videoUrl'] ?? '',
@@ -248,28 +167,6 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
               },
             ),
           ),
-          
-          // Page indicators
-          if (videos.length > 1)
-            Padding(
-              padding: const EdgeInsets.only(top: 16),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: List.generate(videos.length, (index) {
-                  return Container(
-                    width: _currentPage == index ? 24 : 8,
-                    height: 8,
-                    margin: const EdgeInsets.symmetric(horizontal: 4),
-                    decoration: BoxDecoration(
-                      color: _currentPage == index
-                          ? const Color(0xFF52b1e2)
-                          : Colors.grey[300],
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                  );
-                }),
-              ),
-            ),
         ],
       ),
     );
@@ -283,16 +180,9 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
     String link,
   ) {
     final isInitialized = _videoControllers[index]?.value.isInitialized ?? false;
-    final isCurrentPage = _currentPage == index;
 
     return GestureDetector(
-      onTap: () {
-        // Pause auto-scrolling when user taps
-        setState(() {
-          _isAutoScrolling = false;
-        });
-        _handleVideoTap(index, link);
-      },
+      onTap: () => _handleVideoTap(index, link),
       child: Container(
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(16),
@@ -309,8 +199,8 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
           child: Stack(
             fit: StackFit.expand,
             children: [
-              // Video only - no thumbnail, no stretching
-              if (isInitialized && isCurrentPage && _chewieControllers[index] != null)
+              // Video - plays automatically when initialized
+              if (isInitialized && _chewieControllers[index] != null)
                 FittedBox(
                   fit: BoxFit.cover,  // Cover to prevent stretching
                   child: SizedBox(
@@ -366,4 +256,3 @@ class _VideoSliderWidgetState extends State<VideoSliderWidget> {
     );
   }
 }
-
