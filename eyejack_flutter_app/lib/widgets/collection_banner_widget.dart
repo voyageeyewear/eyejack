@@ -30,7 +30,7 @@ class CollectionBannerWidget extends StatelessWidget {
             ClipRRect(
               borderRadius: BorderRadius.circular(0),
               child: AspectRatio(
-                aspectRatio: 2.0, // BIGGER banner like Woggles (was 2.5)
+                aspectRatio: 1.9, // EVEN BIGGER banner - taller (was 2.0)
                 child: CachedNetworkImage(
                   imageUrl: banner.bannerUrl,
                   fit: BoxFit.cover,

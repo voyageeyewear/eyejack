@@ -587,8 +587,8 @@ class _CollectionScreenState extends State<CollectionScreen>
         final screenWidth = constraints.maxWidth;
         final crossAxisCount = screenWidth > 600 ? 3 : 2;
         
-        // Woggles-style: Much taller cards with bigger images
-        final aspectRatio = 0.55; // Like Woggles - tall cards, big images
+        // Woggles-style: VERY tall cards with HUGE images (matching screenshot exactly)
+        final aspectRatio = 0.48; // MUCH TALLER than before - like Woggles
         
         // Get banners for different positions
         final topBanners = _banners.where((b) => b.bannerPosition == 'top').toList();
