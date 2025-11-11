@@ -19,14 +19,14 @@ export const sectionsAPI = {
 
 // Theme Settings API
 export const themeAPI = {
-  getAll: () => api.get('/api/admin/theme-settings'),
-  getByKey: (key: string) => api.get(`/api/admin/theme-settings/${key}`),
-  update: (key: string, data: any) => api.put(`/api/admin/theme-settings/${key}`, data),
+  getAll: () => api.get('/api/admin/theme'),
+  getByKey: (key: string) => api.get(`/api/admin/theme/${key}`),
+  update: (key: string, data: any) => api.put(`/api/admin/theme/${key}`, data),
 };
 
 // Dashboard Stats API
 export const statsAPI = {
-  getStats: () => api.get('/api/admin/dashboard-stats'),
+  getStats: () => api.get('/api/admin/stats'),
 };
 
 // Preview API (Flutter endpoint)
