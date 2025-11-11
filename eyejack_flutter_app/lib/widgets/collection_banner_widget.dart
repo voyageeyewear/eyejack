@@ -23,27 +23,21 @@ class CollectionBannerWidget extends StatelessWidget {
         }
       },
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 12),
+        margin: const EdgeInsets.symmetric(vertical: 16, horizontal: 12),
         child: Stack(
           children: [
             // Banner Image
             ClipRRect(
-              borderRadius: BorderRadius.circular(12),
+              borderRadius: BorderRadius.circular(16),
               child: AspectRatio(
-                aspectRatio: 3.5, // Wide banner format
+                aspectRatio: 2.5, // Bigger, less stretched (was 3.5)
                 child: CachedNetworkImage(
                   imageUrl: banner.bannerUrl,
                   fit: BoxFit.cover,
-                  memCacheWidth: 800,
-                  memCacheHeight: 400,
+                  memCacheWidth: 1200,
+                  memCacheHeight: 600,
                   placeholder: (context, url) => Container(
                     color: Colors.grey[200],
-                    child: const Center(
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        color: Color(0xFF52b1e2),
-                      ),
-                    ),
                   ),
                   errorWidget: (context, url, error) => Container(
                     color: Colors.grey[200],
