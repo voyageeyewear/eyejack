@@ -156,11 +156,16 @@ class _BestSellingCollectionWidgetState extends State<BestSellingCollectionWidge
   }
 
   Widget _buildProductCard(Product product) {
-    final hasDiscount = product.compareAtPrice != null &&
-        product.compareAtPrice! > product.price;
+    // Get first variant's compare at price for discount calculation
+    final firstVariant = product.variants.isNotEmpty ? product.variants.first : null;
+    final compareAtPrice = firstVariant?.compareAtPrice;
+    final price = product.priceRange.minVariantPrice;
+    
+    final hasDiscount = compareAtPrice != null &&
+        double.parse(compareAtPrice.amount) > double.parse(price.amount);
     final discountPercentage = hasDiscount
-        ? (((product.compareAtPrice! - product.price) / product.compareAtPrice!) * 100)
-            .round()
+        ? (((double.parse(compareAtPrice!.amount) - double.parse(price.amount)) / 
+            double.parse(compareAtPrice.amount)) * 100).round()
         : 0;
 
     return GestureDetector(
@@ -196,7 +201,9 @@ class _BestSellingCollectionWidgetState extends State<BestSellingCollectionWidge
                   child: AspectRatio(
                     aspectRatio: 1,
                     child: CachedNetworkImage(
-                      imageUrl: product.imageUrl,
+                      imageUrl: product.images.isNotEmpty 
+                          ? product.images.first.src 
+                          : '',
                       fit: BoxFit.cover,
                       placeholder: (context, url) => Container(
                         color: Colors.grey[100],
@@ -277,17 +284,17 @@ class _BestSellingCollectionWidgetState extends State<BestSellingCollectionWidge
                     Row(
                       children: [
                         Text(
-                          'Rs. ${product.price.toStringAsFixed(2)}',
+                          price.formatted,
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
                             color: Colors.black87,
                           ),
                         ),
-                        if (hasDiscount) ...[
+                        if (hasDiscount && compareAtPrice != null) ...[
                           const SizedBox(width: 6),
                           Text(
-                            'Rs. ${product.compareAtPrice!.toStringAsFixed(2)}',
+                            compareAtPrice.formatted,
                             style: TextStyle(
                               fontSize: 12,
                               color: Colors.grey[500],
