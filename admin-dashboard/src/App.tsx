@@ -5,6 +5,7 @@ import { Dashboard } from './pages/Dashboard';
 import { Sections } from './pages/Sections';
 import { ThemeSettings } from './pages/ThemeSettings';
 import { Preview } from './pages/Preview';
+import Banners from './pages/Banners';
 
 const queryClient = new QueryClient({
   defaultOptions: {
@@ -23,6 +24,7 @@ function App() {
           <Route path="/" element={<Layout />}>
             <Route index element={<Dashboard />} />
             <Route path="sections" element={<Sections />} />
+            <Route path="banners" element={<Banners />} />
             <Route path="theme" element={<ThemeSettings />} />
             <Route path="preview" element={<Preview />} />
           </Route>

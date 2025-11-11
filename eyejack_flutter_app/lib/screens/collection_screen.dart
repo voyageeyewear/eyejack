@@ -3,9 +3,11 @@ import 'package:provider/provider.dart';
 import 'package:cached_network_image/cached_network_image.dart';
 import '../models/collection_model.dart';
 import '../models/product_model.dart';
+import '../models/collection_banner_model.dart';
 import '../providers/shop_provider.dart';
 import '../services/api_service.dart';
 import '../screens/product_detail_screen.dart';
+import '../widgets/collection_banner_widget.dart';
 
 class CollectionScreen extends StatefulWidget {
   final Collection collection;
@@ -16,10 +18,13 @@ class CollectionScreen extends StatefulWidget {
   State<CollectionScreen> createState() => _CollectionScreenState();
 }
 
-class _CollectionScreenState extends State<CollectionScreen> {
+class _CollectionScreenState extends State<CollectionScreen> 
+    with AutomaticKeepAliveClientMixin {
   List<Product>? _products;
   List<Product>? _filteredProducts;
+  List<CollectionBanner> _banners = [];
   bool _isLoading = true;
+  bool _bannersLoading = true;
   String? _error;
   bool _isGridView = true;
   String _sortBy = 'featured'; // featured, price_asc, price_desc, name_asc, name_desc
@@ -30,9 +35,32 @@ class _CollectionScreenState extends State<CollectionScreen> {
   double _maxPrice = 10000;
 
   @override
+  bool get wantKeepAlive => true;
+
+  @override
   void initState() {
     super.initState();
     _loadProducts();
+    _loadBanners();
+  }
+
+  Future<void> _loadBanners() async {
+    try {
+      final banners = await ApiService().fetchCollectionBanners(widget.collection.handle);
+      if (mounted) {
+        setState(() {
+          _banners = banners;
+          _bannersLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading banners: $e');
+      if (mounted) {
+        setState(() {
+          _bannersLoading = false;
+        });
+      }
+    }
   }
 
   Future<void> _loadProducts() async {
@@ -340,6 +368,8 @@ class _CollectionScreenState extends State<CollectionScreen> {
 
   @override
   Widget build(BuildContext context) {
+    super.build(context); // Required for AutomaticKeepAliveClientMixin
+    
     return Scaffold(
       backgroundColor: Colors.white,
       appBar: AppBar(
@@ -558,10 +588,47 @@ class _CollectionScreenState extends State<CollectionScreen> {
         final crossAxisCount = screenWidth > 600 ? 3 : 2;
         
         // Better aspect ratio calculation for proper responsiveness
-        // Image takes ~60% of card, details/buttons take ~40%
         final aspectRatio = 0.52; // Width:Height ratio (shorter cards)
         
-        return GridView.builder(
+        // Get banners for different positions
+        final topBanners = _banners.where((b) => b.bannerPosition == 'top').toList();
+        final after6Banners = _banners.where((b) => b.bannerPosition == 'after_6').toList();
+        final after12Banners = _banners.where((b) => b.bannerPosition == 'after_12').toList();
+        
+        return Column(
+          children: [
+            // Top banners
+            if (topBanners.isNotEmpty)
+              ...topBanners.map((banner) => CollectionBannerWidget(banner: banner)),
+            
+            // Products with interspersed banners
+            ..._buildGridWithBanners(
+              crossAxisCount: crossAxisCount,
+              aspectRatio: aspectRatio,
+              after6Banners: after6Banners,
+              after12Banners: after12Banners,
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  List<Widget> _buildGridWithBanners({
+    required int crossAxisCount,
+    required double aspectRatio,
+    required List<CollectionBanner> after6Banners,
+    required List<CollectionBanner> after12Banners,
+  }) {
+    List<Widget> widgets = [];
+    
+    for (int i = 0; i < _filteredProducts!.length; i += 6) {
+      // Add a grid of up to 6 products
+      final endIndex = (i + 6) <= _filteredProducts!.length ? i + 6 : _filteredProducts!.length;
+      final productsChunk = _filteredProducts!.sublist(i, endIndex);
+      
+      widgets.add(
+        GridView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
           gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
@@ -570,13 +637,26 @@ class _CollectionScreenState extends State<CollectionScreen> {
             crossAxisSpacing: 8,
             mainAxisSpacing: 8,
           ),
-          itemCount: _filteredProducts!.length,
+          itemCount: productsChunk.length,
           itemBuilder: (context, index) {
-            return _buildProductCard(_filteredProducts![index]);
+            return _buildProductCard(productsChunk[index]);
           },
-        );
-      },
-    );
+        ),
+      );
+      
+      // Add banner after every 6 products
+      if (endIndex < _filteredProducts!.length) {
+        if (i == 0 && after6Banners.isNotEmpty) {
+          // After first 6 products
+          widgets.addAll(after6Banners.map((banner) => CollectionBannerWidget(banner: banner)));
+        } else if (i == 6 && after12Banners.isNotEmpty) {
+          // After first 12 products
+          widgets.addAll(after12Banners.map((banner) => CollectionBannerWidget(banner: banner)));
+        }
+      }
+    }
+    
+    return widgets;
   }
 
   Widget _buildProductList() {
@@ -638,8 +718,11 @@ class _CollectionScreenState extends State<CollectionScreen> {
                       ),
                       child: imageUrl.isNotEmpty
                           ? CachedNetworkImage(
-                              imageUrl: imageUrl,
+                              imageUrl: _optimizeImageUrl(imageUrl, 600),
                               fit: BoxFit.cover,
+                              memCacheWidth: 600,
+                              memCacheHeight: 800,
+                              fadeInDuration: const Duration(milliseconds: 200),
                               placeholder: (context, url) => Container(
                                 color: Colors.grey[200],
                                 child: const Center(
@@ -926,8 +1009,11 @@ class _CollectionScreenState extends State<CollectionScreen> {
                     ),
                     child: imageUrl.isNotEmpty
                         ? CachedNetworkImage(
-                            imageUrl: imageUrl,
+                            imageUrl: _optimizeImageUrl(imageUrl, 400),
                             fit: BoxFit.cover,
+                            memCacheWidth: 400,
+                            memCacheHeight: 600,
+                            fadeInDuration: const Duration(milliseconds: 200),
                             placeholder: (context, url) => Container(
                               color: Colors.grey[200],
                               child: const Center(
@@ -1153,5 +1239,14 @@ class _CollectionScreenState extends State<CollectionScreen> {
         );
       }
     }
+  }
+
+  // Optimize image URL with size parameter for faster loading
+  String _optimizeImageUrl(String url, int width) {
+    if (url.contains('cdn.shopify.com')) {
+      final separator = url.contains('?') ? '&' : '?';
+      return '$url${separator}width=$width';
+    }
+    return url;
   }
 }

@@ -1,9 +1,11 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
 import '../config/api_config.dart';
 import '../models/product_model.dart';
 import '../models/collection_model.dart';
 import '../models/section_model.dart';
+import '../models/collection_banner_model.dart';
 
 class ApiService {
   // Fetch theme sections
@@ -371,6 +373,33 @@ class ApiService {
       }
     } catch (e) {
       throw Exception('Error fetching lens options: $e');
+    }
+  }
+
+  // Fetch collection banners
+  Future<List<CollectionBanner>> fetchCollectionBanners(String collectionHandle) async {
+    try {
+      final response = await http
+          .get(Uri.parse('${ApiConfig.baseUrl}/api/banners/collection/$collectionHandle'))
+          .timeout(ApiConfig.timeout);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['success'] == true) {
+          final bannersJson = data['data'] as List;
+          return bannersJson
+              .map((json) => CollectionBanner.fromJson(json))
+              .toList();
+        } else {
+          return [];
+        }
+      } else {
+        debugPrint('Failed to load banners: ${response.statusCode}');
+        return [];
+      }
+    } catch (e) {
+      debugPrint('Error fetching banners: $e');
+      return [];
     }
   }
 }

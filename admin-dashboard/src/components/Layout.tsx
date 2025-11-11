@@ -2,6 +2,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom';
 import { 
   LayoutDashboard, 
   Layers, 
+  Image,
   Palette, 
   Eye, 
   Menu, 
@@ -13,6 +14,7 @@ import { cn } from '../lib/utils';
 const navigation = [
   { name: 'Dashboard', href: '/', icon: LayoutDashboard },
   { name: 'Sections', href: '/sections', icon: Layers },
+  { name: 'Collection Banners', href: '/banners', icon: Image },
   { name: 'Theme Settings', href: '/theme', icon: Palette },
   { name: 'Preview', href: '/preview', icon: Eye },
 ];
