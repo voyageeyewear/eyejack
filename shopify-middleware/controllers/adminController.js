@@ -28,9 +28,8 @@ exports.getSectionById = async (req, res, next) => {
     try {
         const { id } = req.params;
 
-        const section = await AppSection.findOne({
-            where: { section_id: id }
-        });
+        // Find by primary key (id) instead of section_id
+        const section = await AppSection.findByPk(id);
 
         if (!section) {
             return res.status(404).json({
@@ -39,7 +38,7 @@ exports.getSectionById = async (req, res, next) => {
             });
         }
 
-        console.log(`📄 Admin: Retrieved section ${id}`);
+        console.log(`📄 Admin: Retrieved section ID ${id} (${section.section_id})`);
 
         res.json({
             success: true,
@@ -99,9 +98,8 @@ exports.updateSection = async (req, res, next) => {
         const { id } = req.params;
         const updates = req.body;
 
-        const section = await AppSection.findOne({
-            where: { section_id: id }
-        });
+        // Find by primary key (id) instead of section_id
+        const section = await AppSection.findByPk(id);
 
         if (!section) {
             return res.status(404).json({
@@ -111,6 +109,7 @@ exports.updateSection = async (req, res, next) => {
         }
 
         // Update fields
+        if (updates.section_id) section.section_id = updates.section_id;
         if (updates.section_type) section.section_type = updates.section_type;
         if (updates.settings) section.settings = updates.settings;
         if (updates.display_order !== undefined) section.display_order = updates.display_order;
@@ -118,7 +117,7 @@ exports.updateSection = async (req, res, next) => {
 
         await section.save();
 
-        console.log(`✅ Admin: Updated section ${id}`);
+        console.log(`✅ Admin: Updated section ID ${id} (${section.section_id})`);
 
         res.json({
             success: true,
@@ -135,22 +134,24 @@ exports.deleteSection = async (req, res, next) => {
     try {
         const { id } = req.params;
 
-        const deleted = await AppSection.destroy({
-            where: { section_id: id }
-        });
-
-        if (!deleted) {
+        // Find by primary key first to get section_id for logging
+        const section = await AppSection.findByPk(id);
+        
+        if (!section) {
             return res.status(404).json({
                 success: false,
                 error: 'Section not found'
             });
         }
 
-        console.log(`🗑️  Admin: Deleted section ${id}`);
+        const sectionId = section.section_id;
+        await section.destroy();
+
+        console.log(`🗑️  Admin: Deleted section ID ${id} (${sectionId})`);
 
         res.json({
             success: true,
-            message: `Section '${id}' deleted successfully`
+            message: `Section '${sectionId}' deleted successfully`
         });
     } catch (error) {
         console.error('❌ Error deleting section:', error);
@@ -163,9 +164,8 @@ exports.toggleSectionStatus = async (req, res, next) => {
     try {
         const { id } = req.params;
 
-        const section = await AppSection.findOne({
-            where: { section_id: id }
-        });
+        // Find by primary key (id) instead of section_id
+        const section = await AppSection.findByPk(id);
 
         if (!section) {
             return res.status(404).json({
@@ -177,7 +177,7 @@ exports.toggleSectionStatus = async (req, res, next) => {
         section.is_active = !section.is_active;
         await section.save();
 
-        console.log(`🔄 Admin: Toggled section ${id} to ${section.is_active ? 'active' : 'inactive'}`);
+        console.log(`🔄 Admin: Toggled section ID ${id} (${section.section_id}) to ${section.is_active ? 'active' : 'inactive'}`);
 
         res.json({
             success: true,
