@@ -699,9 +699,9 @@ class _CollectionScreenState extends State<CollectionScreen>
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Product Image with Discount Badge
+            // Product Image with Discount Badge (BIGGER - like Woggles!)
             Flexible(
-              flex: 6,
+              flex: 11, // Was 6, now MUCH BIGGER for Woggles style
               child: Stack(
                 children: [
                   Container(
@@ -761,9 +761,9 @@ class _CollectionScreenState extends State<CollectionScreen>
               ),
             ),
             
-            // Product Details
+            // Product Details (SMALLER - like Woggles!)
             Flexible(
-              flex: 7,
+              flex: 3, // Was 7, now MUCH SMALLER for bigger images
               child: Padding(
                 padding: const EdgeInsets.all(8),
                 child: Column(
