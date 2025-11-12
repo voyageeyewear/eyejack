@@ -811,25 +811,31 @@ class _CollectionScreenState extends State<CollectionScreen>
                     ),
                     const SizedBox(height: 2),
                     
-                    // Price
-                    if (hasDiscount && originalPrice > 0)
-                      Text(
-                        'Rs. ${originalPrice.toStringAsFixed(0)}',
-                        style: const TextStyle(
-                          fontSize: 10,
-                          color: Colors.grey,
-                          decoration: TextDecoration.lineThrough,
+                    // Price (Horizontal: Real Price first, then Compare Price)
+                    Row(
+                      children: [
+                        Text(
+                          'Rs. ${salePrice.toStringAsFixed(0)}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFFE74C3C),
+                          ),
                         ),
-                      ),
-                    Text(
-                      'Rs. ${salePrice.toStringAsFixed(0)}',
-                      style: const TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: Color(0xFFE74C3C),
-                      ),
+                        if (hasDiscount && originalPrice > 0) ...[
+                          const SizedBox(width: 6),
+                          Text(
+                            'Rs. ${originalPrice.toStringAsFixed(0)}',
+                            style: const TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey,
+                              decoration: TextDecoration.lineThrough,
+                            ),
+                          ),
+                        ],
+                      ],
                     ),
-                    const SizedBox(height: 2),
+                    const SizedBox(height: 1),
                     
                     // EMI Option
                     Row(
@@ -866,14 +872,14 @@ class _CollectionScreenState extends State<CollectionScreen>
                         ),
                       ],
                     ),
-                    const SizedBox(height: 2),
+                    const Spacer(), // Push stock indicator to bottom
                     
                     // In Stock Indicator
                     Row(
                       children: [
                         Container(
-                          width: 5,
-                          height: 5,
+                          width: 4,
+                          height: 4,
                           decoration: BoxDecoration(
                             color: product.availableForSale
                                 ? const Color(0xFF27916D)
@@ -881,11 +887,11 @@ class _CollectionScreenState extends State<CollectionScreen>
                             shape: BoxShape.circle,
                           ),
                         ),
-                        const SizedBox(width: 3),
+                        const SizedBox(width: 2),
                         Text(
                           product.availableForSale ? 'In stock' : 'Out of stock',
                           style: TextStyle(
-                            fontSize: 9,
+                            fontSize: 8,
                             color: product.availableForSale
                                 ? const Color(0xFF27916D)
                                 : Colors.red,
@@ -894,14 +900,15 @@ class _CollectionScreenState extends State<CollectionScreen>
                         ),
                       ],
                     ),
+                    const SizedBox(height: 2), // Tiny space before buttons
                   ],
                 ),
               ),
             ),
             
-            // Add to Cart Button (Compact!)
+            // Add to Cart Button (Ultra Compact!)
             Padding(
-              padding: const EdgeInsets.only(left: 6, right: 6, top: 2, bottom: 0.5),
+              padding: const EdgeInsets.only(left: 6, right: 6, top: 1, bottom: 0),
               child: ElevatedButton(
                 onPressed: product.availableForSale
                     ? () => _addToCart(product)
@@ -909,27 +916,27 @@ class _CollectionScreenState extends State<CollectionScreen>
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
                   foregroundColor: Colors.black,
-                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  padding: const EdgeInsets.symmetric(vertical: 3),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(4),
                     side: const BorderSide(color: Colors.black, width: 1),
                   ),
                   elevation: 0,
-                  minimumSize: const Size(double.infinity, 28),
+                  minimumSize: const Size(double.infinity, 24),
                 ),
                 child: const Text(
                   'ADD TO CART',
                   style: TextStyle(
-                    fontSize: 10,
+                    fontSize: 9,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
               ),
             ),
             
-            // Buy 1 Get 1 Free Button (Compact!)
+            // Buy 1 Get 1 Free Button (No bottom padding!)
             Padding(
-              padding: const EdgeInsets.only(left: 6, right: 6, top: 0.5, bottom: 6),
+              padding: const EdgeInsets.only(left: 6, right: 6, top: 1, bottom: 0),
               child: ElevatedButton(
                 onPressed: product.availableForSale
                     ? () => _addToCart(product)
@@ -937,17 +944,17 @@ class _CollectionScreenState extends State<CollectionScreen>
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF5DADE2),
                   foregroundColor: Colors.white,
-                  padding: const EdgeInsets.symmetric(vertical: 4),
+                  padding: const EdgeInsets.symmetric(vertical: 3),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(4),
                   ),
                   elevation: 0,
-                  minimumSize: const Size(double.infinity, 26),
+                  minimumSize: const Size(double.infinity, 22),
                 ),
                 child: const Text(
                   'BUY 1 GET 1 FREE',
                   style: TextStyle(
-                    fontSize: 9,
+                    fontSize: 8,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
