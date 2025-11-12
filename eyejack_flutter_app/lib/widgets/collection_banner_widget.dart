@@ -23,27 +23,24 @@ class CollectionBannerWidget extends StatelessWidget {
         }
       },
       child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+        margin: const EdgeInsets.symmetric(vertical: 8, horizontal: 0), // FULL WIDTH - No horizontal margin
         child: Stack(
           children: [
-            // Banner Image
-            ClipRRect(
-              borderRadius: BorderRadius.circular(12),
-              child: AspectRatio(
-                aspectRatio: 2.2, // Better ratio to prevent stretching
-                child: CachedNetworkImage(
-                  imageUrl: banner.bannerUrl,
-                  fit: BoxFit.fill, // Fill to prevent stretching
-                  memCacheWidth: 1400,
-                  memCacheHeight: 700,
-                  placeholder: (context, url) => Container(
-                    color: Colors.grey[200],
-                  ),
-                  errorWidget: (context, url, error) => Container(
-                    color: Colors.grey[200],
-                    child: const Center(
-                      child: Icon(Icons.image_not_supported, color: Colors.grey),
-                    ),
+            // Banner Image - FULL WIDTH & RESPONSIVE
+            AspectRatio(
+              aspectRatio: 16 / 9, // Standard responsive ratio
+              child: CachedNetworkImage(
+                imageUrl: banner.bannerUrl,
+                fit: BoxFit.cover, // Cover maintains aspect ratio without stretching
+                memCacheWidth: 1400,
+                memCacheHeight: 800,
+                placeholder: (context, url) => Container(
+                  color: Colors.grey[200],
+                ),
+                errorWidget: (context, url, error) => Container(
+                  color: Colors.grey[200],
+                  child: const Center(
+                    child: Icon(Icons.image_not_supported, color: Colors.grey),
                   ),
                 ),
               ),
@@ -54,7 +51,6 @@ class CollectionBannerWidget extends StatelessWidget {
               Positioned.fill(
                 child: Container(
                   decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
                     gradient: LinearGradient(
                       begin: Alignment.centerRight,
                       end: Alignment.centerLeft,

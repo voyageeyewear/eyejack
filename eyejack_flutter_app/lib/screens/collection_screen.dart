@@ -564,7 +564,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
         // Product Grid/List
         Expanded(
           child: SingleChildScrollView(
-            padding: const EdgeInsets.symmetric(horizontal: 12),
+            // NO HORIZONTAL PADDING - allows banners to be full width!
             child: _isGridView
                 ? _buildProductGrid()
                 : _buildProductList(),
@@ -622,20 +622,23 @@ class _CollectionScreenState extends State<CollectionScreen> {
       final productsChunk = _filteredProducts!.sublist(i, endIndex);
       
       widgets.add(
-        GridView.builder(
-          shrinkWrap: true,
-          physics: const NeverScrollableScrollPhysics(),
-          gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
-            crossAxisCount: crossAxisCount,
-            childAspectRatio: aspectRatio,
-            crossAxisSpacing: 8,
-            mainAxisSpacing: 8,
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 12), // Add padding for product cards
+          child: GridView.builder(
+            shrinkWrap: true,
+            physics: const NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: crossAxisCount,
+              childAspectRatio: aspectRatio,
+              crossAxisSpacing: 8,
+              mainAxisSpacing: 8,
+            ),
+            itemCount: productsChunk.length,
+            itemBuilder: (context, index) {
+              final product = productsChunk[index];
+              return _buildProductCard(product, key: ValueKey(product.id));
+            },
           ),
-          itemCount: productsChunk.length,
-          itemBuilder: (context, index) {
-            final product = productsChunk[index];
-            return _buildProductCard(product, key: ValueKey(product.id));
-          },
         ),
       );
       
