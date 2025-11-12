@@ -697,13 +697,20 @@ class _CollectionScreenState extends State<CollectionScreen> {
           borderRadius: BorderRadius.circular(8),
           border: Border.all(color: Colors.grey[300]!),
         ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Product Image with Discount Badge (BIGGER - like Woggles!)
-            Flexible(
-              flex: 10, // Balanced with details+buttons flex: 6
-              child: Stack(
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            // Calculate heights properly
+            final totalHeight = constraints.maxHeight;
+            final imageHeight = totalHeight * 0.50; // 50% for image
+            final detailsHeight = totalHeight * 0.50; // 50% for details+buttons
+            
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Product Image with Discount Badge
+                SizedBox(
+                  height: imageHeight,
+                  child: Stack(
                 children: [
                   Container(
                     width: double.infinity,
@@ -758,24 +765,24 @@ class _CollectionScreenState extends State<CollectionScreen> {
                         ),
                       ),
                     ),
-                ],
-              ),
-            ),
-            
-            // Product Details + Buttons (MAXIMUM Spacing!)
-            Flexible(
-              flex: 6, // Increased to fit details AND buttons properly
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Product Details Section
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                        children: [
+                  ),
+                ),
+                
+                // Product Details + Buttons Section
+                SizedBox(
+                  height: detailsHeight,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Product Details Section - scrollable if needed
+                      Expanded(
+                        child: SingleChildScrollView(
+                          physics: const NeverScrollableScrollPhysics(),
+                          child: Padding(
+                            padding: const EdgeInsets.all(8),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
                     // Product Title
                     Text(
                       product.title,
@@ -873,7 +880,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
                         ),
                       ],
                     ),
-                    const Spacer(), // Push stock indicator to bottom
+                    const SizedBox(height: 6),
                     
                     // In Stock Indicator
                     Row(
@@ -901,70 +908,77 @@ class _CollectionScreenState extends State<CollectionScreen> {
                         ),
                       ],
                     ),
-                    const SizedBox(height: 10), // More space before buttons
-                        ],
+                              ],
+                            ),
+                          ),
+                        ),
                       ),
-                    ),
+                      
+                      // Buttons Section - Fixed height at bottom
+                      // Add to Cart Button
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        child: SizedBox(
+                          height: 32,
+                          child: ElevatedButton(
+                            onPressed: product.availableForSale
+                                ? () => _addToCart(product)
+                                : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.white,
+                              foregroundColor: Colors.black,
+                              padding: EdgeInsets.zero,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(6),
+                                side: const BorderSide(color: Colors.black, width: 1.5),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: const Text(
+                              'ADD TO CART',
+                              style: TextStyle(
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      
+                      // Buy 1 Get 1 Free Button
+                      Padding(
+                        padding: const EdgeInsets.only(left: 8, right: 8, bottom: 4),
+                        child: SizedBox(
+                          height: 30,
+                          child: ElevatedButton(
+                            onPressed: product.availableForSale
+                                ? () => _addToCart(product)
+                                : null,
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: const Color(0xFF5DADE2),
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.zero,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(6),
+                              ),
+                              elevation: 0,
+                            ),
+                            child: const Text(
+                              'BUY 1 GET 1 FREE',
+                              style: TextStyle(
+                                fontSize: 9,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  
-                  // Add to Cart Button (MAXIMUM Spacing!)
-                  Padding(
-                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-                    child: ElevatedButton(
-                      onPressed: product.availableForSale
-                          ? () => _addToCart(product)
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: Colors.white,
-                        foregroundColor: Colors.black,
-                        padding: const EdgeInsets.symmetric(vertical: 10),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                          side: const BorderSide(color: Colors.black, width: 1.5),
-                        ),
-                        elevation: 0,
-                        minimumSize: const Size(double.infinity, 38),
-                      ),
-                      child: const Text(
-                        'ADD TO CART',
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                  
-                  // Buy 1 Get 1 Free Button (MAXIMUM Spacing!)
-                  Padding(
-                    padding: const EdgeInsets.only(left: 12, right: 12, top: 6, bottom: 8),
-                    child: ElevatedButton(
-                      onPressed: product.availableForSale
-                          ? () => _addToCart(product)
-                          : null,
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF5DADE2),
-                        foregroundColor: Colors.white,
-                        padding: const EdgeInsets.symmetric(vertical: 9),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        elevation: 0,
-                        minimumSize: const Size(double.infinity, 35),
-                      ),
-                      child: const Text(
-                        'BUY 1 GET 1 FREE',
-                        style: TextStyle(
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
+                ),
+              ],
+            );
+          },
         ),
       ),
     );
