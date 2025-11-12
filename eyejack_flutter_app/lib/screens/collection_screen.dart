@@ -916,11 +916,12 @@ class _CollectionScreenState extends State<CollectionScreen> {
                       ),
                       
                       // Buttons Section - Fixed height at bottom
-                      // Add to Cart Button
+                      // Add to Cart Button - FULL WIDTH
                       Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                        padding: const EdgeInsets.only(top: 2, bottom: 2),
                         child: SizedBox(
                           height: 32,
+                          width: double.infinity,
                           child: ElevatedButton(
                             onPressed: product.availableForSale
                                 ? () => _addToCart(product)
@@ -930,7 +931,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
                               foregroundColor: Colors.black,
                               padding: EdgeInsets.zero,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(6),
+                                borderRadius: BorderRadius.circular(0), // Sharp corners for full width
                                 side: const BorderSide(color: Colors.black, width: 1.5),
                               ),
                               elevation: 0,
@@ -946,11 +947,12 @@ class _CollectionScreenState extends State<CollectionScreen> {
                         ),
                       ),
                       
-                      // Buy 1 Get 1 Free Button
+                      // Buy 1 Get 1 Free Button - FULL WIDTH
                       Padding(
-                        padding: const EdgeInsets.only(left: 8, right: 8, bottom: 4),
+                        padding: const EdgeInsets.only(bottom: 4),
                         child: SizedBox(
                           height: 30,
+                          width: double.infinity,
                           child: ElevatedButton(
                             onPressed: product.availableForSale
                                 ? () => _addToCart(product)
@@ -960,7 +962,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
                               foregroundColor: Colors.white,
                               padding: EdgeInsets.zero,
                               shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(6),
+                                borderRadius: BorderRadius.circular(0), // Sharp corners for full width
                               ),
                               elevation: 0,
                             ),
