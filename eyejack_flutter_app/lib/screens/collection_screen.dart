@@ -464,11 +464,11 @@ class _CollectionScreenState extends State<CollectionScreen> {
           ),
         ],
       ),
-      body: _buildBody(),
+      body: _buildBody(collectionSettings),
     );
   }
 
-  Widget _buildBody() {
+  Widget _buildBody(CollectionPageSettings collectionSettings) {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -670,7 +670,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
           child: SingleChildScrollView(
             // NO HORIZONTAL PADDING - allows banners to be full width!
             child: _isGridView
-                ? _buildProductGrid()
+                ? _buildProductGrid(collectionSettings)
                 : _buildProductList(),
           ),
         ),
@@ -678,7 +678,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
     );
   }
 
-  Widget _buildProductGrid() {
+  Widget _buildProductGrid(CollectionPageSettings settings) {
     return LayoutBuilder(
       builder: (context, constraints) {
         // Calculate optimal columns based on screen width
@@ -705,7 +705,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
               aspectRatio: aspectRatio,
               after6Banners: after6Banners,
               after12Banners: after12Banners,
-              settings: collectionSettings,
+              settings: settings,
             ),
           ],
         );
