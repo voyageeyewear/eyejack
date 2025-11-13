@@ -162,6 +162,14 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   @override
   Widget build(BuildContext context) {
     final hasNoPowerTag = widget.product.tags.contains('no-power');
+    
+    // Check for 'spec' tag (case-insensitive)
+    final hasSpecTag = widget.product.tags.any((tag) => tag.toLowerCase() == 'spec');
+    
+    // Debug: Print product tags
+    debugPrint('🏷️ Product: ${widget.product.title}');
+    debugPrint('🏷️ Tags: ${widget.product.tags}');
+    debugPrint('🏷️ Has spec tag: $hasSpecTag');
 
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
@@ -286,12 +294,34 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
                 const SizedBox(height: 8),
 
-                // Product Specifications (new component)
-                ProductSpecsWidget(
-                  specs: _buildSpecsData(),
+                // DEBUG: Show tags info
+                Container(
+                  color: Colors.amber[100],
+                  padding: const EdgeInsets.all(16),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('DEBUG: Product Tags', style: TextStyle(fontWeight: FontWeight.bold)),
+                      Text('Tags: ${widget.product.tags}'),
+                      Text('Has spec tag: $hasSpecTag', 
+                        style: TextStyle(
+                          color: hasSpecTag ? Colors.green : Colors.red,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-
+                
                 const SizedBox(height: 8),
+
+                // Product Specifications (new component) - Only show if product has 'spec' tag
+                if (hasSpecTag) ...[
+                  ProductSpecsWidget(
+                    specs: _buildSpecsData(),
+                  ),
+                  const SizedBox(height: 8),
+                ],
 
                 // Product FAQs (new component)
                 ProductFAQWidget(
