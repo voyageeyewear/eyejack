@@ -1,34 +1,73 @@
 import 'package:flutter/material.dart';
 
-class ProductFeaturesWidget extends StatelessWidget {
+class ProductFeaturesWidget extends StatefulWidget {
   final List<Map<String, dynamic>> features;
 
   const ProductFeaturesWidget({super.key, required this.features});
 
   @override
+  State<ProductFeaturesWidget> createState() => _ProductFeaturesWidgetState();
+}
+
+class _ProductFeaturesWidgetState extends State<ProductFeaturesWidget> {
+  bool _isExpanded = false;
+
+  @override
   Widget build(BuildContext context) {
-    if (features.isEmpty) return const SizedBox.shrink();
+    if (widget.features.isEmpty) return const SizedBox.shrink();
 
     return Container(
       color: Colors.white,
-      padding: const EdgeInsets.all(16),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
-            'Product Features',
-            style: TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-              color: Colors.black,
+          // Header with expand/collapse
+          InkWell(
+            onTap: () {
+              setState(() {
+                _isExpanded = !_isExpanded;
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(color: Colors.grey[200]!),
+                ),
+              ),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text(
+                    'Product Features',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black,
+                    ),
+                  ),
+                  Icon(
+                    _isExpanded ? Icons.remove : Icons.add,
+                    color: Colors.black54,
+                    size: 22,
+                  ),
+                ],
+              ),
             ),
           ),
-          const SizedBox(height: 20),
-          ...features.map((feature) => _buildFeatureItem(
-                feature['icon'] as IconData? ?? Icons.star,
-                feature['title'] as String? ?? '',
-                feature['description'] as String? ?? '',
-              )),
+          
+          // Content (only shown when expanded)
+          if (_isExpanded)
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Column(
+                children: widget.features.map((feature) => _buildFeatureItem(
+                      feature['icon'] as IconData? ?? Icons.star,
+                      feature['title'] as String? ?? '',
+                      feature['description'] as String? ?? '',
+                    )).toList(),
+              ),
+            ),
         ],
       ),
     );

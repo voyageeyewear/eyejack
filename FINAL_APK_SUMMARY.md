@@ -145,3 +145,4 @@ Just update the Shopify theme settings to enable video slides, and everything wi
 **Last Updated**: October 30, 2025, 1:46 PM
 
 
+

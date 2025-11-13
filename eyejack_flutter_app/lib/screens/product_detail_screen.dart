@@ -31,6 +31,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   final ScrollController _scrollController = ScrollController();
   bool _showStickyCart = false;
   bool _isDescriptionExpanded = false;
+  bool _isFrameMeasurementsExpanded = false;
 
   @override
   void initState() {
@@ -165,35 +166,35 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFFAFAFA),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFF1a2332),
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.black),
+          icon: const Icon(Icons.arrow_back, color: Colors.white),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'Product Details',
           style: TextStyle(
-            color: Colors.black,
+            color: Colors.white,
             fontSize: 18,
-            fontWeight: FontWeight.w600,
+            fontWeight: FontWeight.bold,
           ),
         ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.favorite_border, color: Colors.black),
+            icon: const Icon(Icons.favorite_border, color: Colors.white),
             onPressed: () {
               // TODO: Add to favorites
             },
           ),
           IconButton(
-            icon: const Icon(Icons.share_outlined, color: Colors.black),
+            icon: const Icon(Icons.share_outlined, color: Colors.white),
             onPressed: () {
               // TODO: Share product
             },
           ),
           IconButton(
-            icon: const Icon(Icons.shopping_cart_outlined, color: Colors.black),
+            icon: const Icon(Icons.shopping_cart_outlined, color: Colors.white),
             onPressed: _showCartDrawer,
           ),
         ],
@@ -666,21 +667,19 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   Widget _buildDescriptionSection() {
     final description = widget.product.description;
-    final isLongDescription = description.length > 300;
     
     return Container(
       color: Colors.white,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // Header with expand/collapse
           InkWell(
-            onTap: isLongDescription
-                ? () {
-                    setState(() {
-                      _isDescriptionExpanded = !_isDescriptionExpanded;
-                    });
-                  }
-                : null,
+            onTap: () {
+              setState(() {
+                _isDescriptionExpanded = !_isDescriptionExpanded;
+              });
+            },
             child: Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
@@ -699,17 +698,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       color: Colors.black,
                     ),
                   ),
-                  if (isLongDescription)
-                    Icon(
-                      _isDescriptionExpanded ? Icons.remove : Icons.add,
-                      color: Colors.black54,
-                      size: 22,
-                    ),
+                  Icon(
+                    _isDescriptionExpanded ? Icons.remove : Icons.add,
+                    color: Colors.black54,
+                    size: 22,
+                  ),
                 ],
               ),
             ),
           ),
-          if (_isDescriptionExpanded || !isLongDescription)
+          
+          // Content (only shown when expanded)
+          if (_isDescriptionExpanded)
             Padding(
               padding: const EdgeInsets.all(20),
               child: Text(
@@ -720,35 +720,6 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   height: 1.7,
                   letterSpacing: 0.2,
                 ),
-              ),
-            )
-          else
-            Padding(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    description.length > 300
-                        ? '${description.substring(0, 300)}...'
-                        : description,
-                    style: TextStyle(
-                      fontSize: 15,
-                      color: Colors.grey[800],
-                      height: 1.7,
-                      letterSpacing: 0.2,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    'Read More',
-                    style: TextStyle(
-                      fontSize: 14,
-                      color: const Color(0xFF27916D),
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
               ),
             ),
         ],
@@ -856,38 +827,64 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     }
     
     return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey[50],
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.grey[200]!),
-      ),
+      color: Colors.white,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
-            children: [
-              Icon(Icons.straighten, color: Color(0xFF27916D), size: 20),
-              SizedBox(width: 8),
-              Text(
-                'Frame Measurements',
-                style: TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.black,
+          // Header with expand/collapse
+          InkWell(
+            onTap: () {
+              setState(() {
+                _isFrameMeasurementsExpanded = !_isFrameMeasurementsExpanded;
+              });
+            },
+            child: Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                border: Border(
+                  bottom: BorderSide(color: Colors.grey[200]!),
                 ),
               ),
-            ],
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: const [
+                      Icon(Icons.straighten, color: Color(0xFF27916D), size: 20),
+                      SizedBox(width: 8),
+                      Text(
+                        'Frame Measurements',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black,
+                        ),
+                      ),
+                    ],
+                  ),
+                  Icon(
+                    _isFrameMeasurementsExpanded ? Icons.remove : Icons.add,
+                    color: Colors.black54,
+                    size: 22,
+                  ),
+                ],
+              ),
+            ),
           ),
-          const SizedBox(height: 16),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceAround,
-            children: [
-              _buildMeasurement('Lens Width', lensWidth),
-              _buildMeasurement('Bridge', bridge),
-              _buildMeasurement('Temple', temple),
-            ],
-          ),
+          
+          // Content (only shown when expanded)
+          if (_isFrameMeasurementsExpanded)
+            Padding(
+              padding: const EdgeInsets.all(20),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceAround,
+                children: [
+                  _buildMeasurement('Lens Width', lensWidth),
+                  _buildMeasurement('Bridge', bridge),
+                  _buildMeasurement('Temple', temple),
+                ],
+              ),
+            ),
         ],
       ),
     );
@@ -1222,64 +1219,63 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            // Price Row
+            // Single Row for Price, Compare Price, Discount, and Tax Text
             Row(
               children: [
                 // Current Price
                 Text(
                   price.formatted,
                   style: const TextStyle(
-                    fontSize: 28,
+                    fontSize: 22,
                     fontWeight: FontWeight.bold,
                     color: Colors.black,
                   ),
                 ),
-                const SizedBox(width: 12),
+                const SizedBox(width: 8),
                 
                 // Original Price (if discount)
                 if (compareAtPrice != null) ...[
                   Text(
                     compareAtPrice.formatted,
                     style: TextStyle(
-                      fontSize: 16,
+                      fontSize: 14,
                       color: Colors.grey[600],
                       decoration: TextDecoration.lineThrough,
                     ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 6),
                   
                   // Discount Badge
                   Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                    padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
                     decoration: BoxDecoration(
                       color: const Color(0xFF27916D),
                       borderRadius: BorderRadius.circular(4),
                     ),
                     child: Text(
-                      '${_calculateDiscount(compareAtPrice, price)}% Off',
+                      '${_calculateDiscount(compareAtPrice, price)}% OFF',
                       style: const TextStyle(
-                        fontSize: 12,
+                        fontSize: 11,
                         fontWeight: FontWeight.bold,
                         color: Colors.white,
                       ),
                     ),
                   ),
+                  const SizedBox(width: 6),
                 ],
-              ],
-            ),
-            
-            const SizedBox(height: 4),
-            
-            // Inclusive of all taxes text
-            Align(
-              alignment: Alignment.centerLeft,
-              child: Text(
-                'Inclusive of all taxes',
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[600],
+                
+                // Inclusive of all taxes text
+                Expanded(
+                  child: Text(
+                    '(Inclusive of all taxes)',
+                    style: TextStyle(
+                      fontSize: 11,
+                      color: Colors.grey[600],
+                    ),
+                    overflow: TextOverflow.ellipsis,
+                  ),
                 ),
-              ),
+              ],
             ),
             
             const SizedBox(height: 12),
