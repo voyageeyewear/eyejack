@@ -8,18 +8,24 @@ EyeJack Native Application is a full-featured mobile e-commerce app that replica
 
 ## 📦 Latest Release
 
-**Version:** 8.0.1 (Build 81)  
-**Release Date:** November 11, 2025  
-**APK:** `Eyejack-v8.0.1-AdminDashboard.apk`
+**Version:** 12.6.1 (Build 129)  
+**Release Date:** November 13, 2025  
+**APK:** `Eyejack-v12.6.1-Build129-FITS-IN-CARD.apk`
 
-### 🎨 What's New in v8.0.1 - **ADMIN DASHBOARD RELEASE**
-- 🎉 **NEW: Admin Dashboard**: Professional web-based dashboard for content management
+### 🎨 What's New in v12.6.1 - **COLLECTION SCREEN OPTIMIZED**
+- ✨ **Improved Layout**: Collection screen product cards fit perfectly within containers
+- 🎯 **Better Spacing**: Optimized padding and margins for professional look
+- 🔘 **Rounded Buttons**: Modernized button styling with rounded corners
+- 📱 **Responsive Design**: Side-by-side button layout that adapts to screen size
+- 🐛 **Bug Fixes**: Fixed gap issues and overlapping elements
+- 🚀 **Performance**: Smoother scrolling and better memory management
+
+### Previous v8.0.1 Features (Admin Dashboard)
+- 🎉 **Admin Dashboard**: Professional web-based dashboard for content management
 - 🗄️ **PostgreSQL Integration**: All app content stored in production database
 - ⚡ **Real-Time Updates**: Change app content instantly without rebuilds
 - 🎨 **Theme Management**: Edit colors, styles, and settings through UI
 - 📊 **Section Management**: Add, edit, delete, and reorder app sections
-- 🔒 **Local Admin Tool**: Secure dashboard runs on your computer
-- 🚀 **Zero Downtime**: Update content while app is live
 
 ### Previous v6.0.1 Features
 - ✅ **BoAt-Style Product Page**: Modern two-button layout (Add To Cart + Select Lens)
@@ -651,6 +657,29 @@ Automatic categorization by keywords:
 
 ## 🐛 Troubleshooting
 
+### Emulator Shows "Error Loading Store" (DNS Issue)
+**Issue**: Android emulator can't resolve Railway domain (motivated-intuition-production.up.railway.app)  
+**Solution**: Restart emulator with Google DNS servers
+```bash
+# Kill current emulator
+adb emu kill
+
+# Start emulator with DNS fix (replace AVD_NAME with your emulator name)
+/Users/ssenterprises/Library/Android/sdk/emulator/emulator -avd AVD_NAME -dns-server 8.8.8.8,8.8.4.4 -no-snapshot &
+
+# Wait for boot, then install APK
+adb wait-for-device
+adb install -r Eyejack-v12.6.1-Build129-FITS-IN-CARD.apk
+adb shell am start -n com.eyejack.app/.MainActivity
+```
+
+**Alternative**: Use `adb root` then set DNS manually
+```bash
+adb root
+adb shell setprop net.dns1 8.8.8.8
+adb shell setprop net.dns2 8.8.4.4
+```
+
 ### App Shows Old Data
 **Solution**: Pull down to refresh or clear app data (Settings → Apps → Eyejack → Clear Data)
 
@@ -659,6 +688,14 @@ Automatic categorization by keywords:
 1. Check internet connection
 2. Verify Railway backend is running (https://motivated-intuition-production.up.railway.app/health)
 3. Pull to refresh
+4. If using emulator, check DNS settings (see above)
+
+### Backend Not Responding
+**Solution**:
+1. Check Railway deployment status
+2. Test API health: `curl https://motivated-intuition-production.up.railway.app/health`
+3. Expected response: `{"status":"OK","message":"Shopify Middleware API is running"...}`
+4. If server is down, redeploy: `git push origin main` (auto-deploys to Railway)
 
 ### Videos Cropping
 **Fixed**: All videos use BoxFit.contain (no cropping)
@@ -785,9 +822,9 @@ For issues or questions:
 
 **Production URL**: https://motivated-intuition-production.up.railway.app  
 **Live Store**: www.eyejack.in  
-**Latest APK**: Eyejack-v6.0.1-BoatStyle-Build61.apk (52MB)  
-**Last Updated**: November 5, 2024  
-**Current Version**: 6.0.1 (Build 61)
+**Latest APK**: Eyejack-v12.6.1-Build129-FITS-IN-CARD.apk  
+**Last Updated**: November 13, 2025  
+**Current Version**: 12.6.1 (Build 129)
 
 ### 🎯 Quick Links
 - [BoAt-Style Update Summary](BOAT_STYLE_UPDATE.md)

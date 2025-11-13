@@ -485,6 +485,36 @@ kill -9 $(lsof -ti:3000)
 2. Verify `package.json` has all dependencies
 3. Ensure environment variables are set
 
+### Android Emulator Can't Connect
+**Issue**: Emulator shows "Error Loading Store" or DNS resolution fails  
+**Solution**: Restart emulator with Google DNS servers
+```bash
+# Kill current emulator
+adb emu kill
+
+# Find your AVD name
+/Users/ssenterprises/Library/Android/sdk/emulator/emulator -list-avds
+
+# Start with DNS fix
+/Users/ssenterprises/Library/Android/sdk/emulator/emulator -avd YOUR_AVD_NAME -dns-server 8.8.8.8,8.8.4.4 -no-snapshot &
+```
+
+### Check Server Health
+**Test production server:**
+```bash
+curl https://motivated-intuition-production.up.railway.app/health
+```
+
+**Expected response:**
+```json
+{
+  "status": "OK",
+  "message": "Shopify Middleware API is running",
+  "store": "eyejack1907.myshopify.com",
+  "database": "Connected"
+}
+```
+
 ## 📚 Resources
 
 - [Shopify Storefront API](https://shopify.dev/api/storefront)
@@ -508,4 +538,11 @@ Proprietary and confidential.
 **Production URL**: https://motivated-intuition-production.up.railway.app  
 **Store**: eyejack1907.myshopify.com (www.eyejack.in)  
 **API Version**: 2025-01  
-**Last Updated**: October 30, 2025
+**Status**: ✅ **LIVE & OPERATIONAL**  
+**Last Updated**: November 13, 2025
+
+### 🚀 Quick Health Check
+```bash
+# Test if server is responding
+curl https://motivated-intuition-production.up.railway.app/api/shopify/theme-sections | head -c 100
+```
