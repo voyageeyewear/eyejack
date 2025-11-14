@@ -555,7 +555,11 @@ exports.fetchProductById = async (id) => {
 };
 
 // Fetch products by collection
-exports.fetchProductsByCollection = async (handle, limit = 50) => {
+exports.fetchProductsByCollection = async (handle, limit = 50, offset = 0) => {
+  // For offset-based pagination, we need to fetch all products up to offset+limit
+  // and then slice the array. Not ideal but works for now.
+  const fetchLimit = offset + limit;
+  
   const query = `
     query getCollection($handle: String!, $first: Int!) {
       collection(handle: $handle) {
@@ -631,13 +635,22 @@ exports.fetchProductsByCollection = async (handle, limit = 50) => {
 
   const response = await storefrontClient.post('', {
     query,
-    variables: { handle, first: limit }
+    variables: { handle, first: Math.min(fetchLimit, 250) } // Shopify max is 250
   });
 
   const collection = response.data.data.collection;
+  const allProducts = collection.products.edges.map(edge => formatProduct(edge.node));
+  
+  // Slice array for pagination
+  const paginatedProducts = allProducts.slice(offset, offset + limit);
+  
+  console.log(`📦 Backend pagination: total=${allProducts.length}, offset=${offset}, limit=${limit}, returned=${paginatedProducts.length}`);
+  
   return {
     ...collection,
-    products: collection.products.edges.map(edge => formatProduct(edge.node))
+    products: paginatedProducts,
+    totalCount: allProducts.length,
+    hasMore: (offset + limit) < allProducts.length
   };
 };
 

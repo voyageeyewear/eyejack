@@ -96,10 +96,14 @@ exports.getProductsByCollection = async (req, res, next) => {
   try {
     const { handle } = req.params;
     const limit = parseInt(req.query.limit) || 50;
-    const products = await shopifyService.fetchProductsByCollection(handle, limit);
+    const offset = parseInt(req.query.offset) || 0;
+    
+    console.log(`📦 Pagination request: collection=${handle}, limit=${limit}, offset=${offset}`);
+    
+    const result = await shopifyService.fetchProductsByCollection(handle, limit, offset);
     res.json({
       success: true,
-      data: products
+      data: result
     });
   } catch (error) {
     next(error);
