@@ -25,40 +25,47 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   void _showCartDrawer() {
+    // Store the parent context and navigator before opening modal
+    final parentContext = context;
+    final parentNavigator = Navigator.of(context);
+    final parentScaffoldMessenger = ScaffoldMessenger.of(context);
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => CartDrawer(
+      builder: (modalContext) => CartDrawer(
         onCheckout: () async {
-          Navigator.pop(context); // Close cart drawer
+          // Close the modal first
+          Navigator.pop(modalContext);
+          
+          // Wait a bit for modal to close completely
+          await Future.delayed(const Duration(milliseconds: 300));
           
           try {
             debugPrint('🛒 Opening Kwikpass checkout...');
             
-            // Show loading indicator
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Row(
-                    children: [
-                      SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
+            // Show loading indicator using the parent context
+            parentScaffoldMessenger.showSnackBar(
+              const SnackBar(
+                content: Row(
+                  children: [
+                    SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
                       ),
-                      SizedBox(width: 12),
-                      Text('Opening checkout...'),
-                    ],
-                  ),
-                  backgroundColor: Color(0xFF27916D),
-                  duration: Duration(seconds: 2),
+                    ),
+                    SizedBox(width: 12),
+                    Text('Opening checkout...'),
+                  ],
                 ),
-              );
-            }
+                backgroundColor: Color(0xFF27916D),
+                duration: Duration(seconds: 2),
+              ),
+            );
             
             // Get cart data
             final cartData = await ApiService().getCart();
@@ -77,7 +84,7 @@ class _HomeScreenState extends State<HomeScreen> {
             String cleanCartId = cartId;
             if (cartId.contains('gid://shopify/Cart/')) {
               final match = RegExp(r'gid://shopify/Cart/([^?]+)').firstMatch(cartId);
-              if (match != null) {
+              if (match != null && match.group(1) != null) {
                 cleanCartId = match.group(1)!;
                 debugPrint('✅ Extracted clean cart ID: $cleanCartId');
               }
@@ -85,10 +92,9 @@ class _HomeScreenState extends State<HomeScreen> {
             
             debugPrint('🚀 Navigating to checkout with cartId: $cleanCartId');
             
-            // Navigate to Kwikpass Checkout screen
-            if (mounted) {
-              Navigator.push(
-                context,
+            // Navigate to Kwikpass Checkout screen using the parent navigator
+            if (mounted && parentContext.mounted) {
+              await parentNavigator.push(
                 MaterialPageRoute(
                   builder: (context) => KPCheckoutScreen(
                     cartId: cleanCartId,
@@ -98,8 +104,8 @@ class _HomeScreenState extends State<HomeScreen> {
                 ),
               ).then((result) {
                 // Handle checkout result
-                if (result == true && mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
+                if (result == true && mounted && parentContext.mounted) {
+                  parentScaffoldMessenger.showSnackBar(
                     const SnackBar(
                       content: Text('✅ Order placed successfully!'),
                       backgroundColor: Color(0xFF27916D),
@@ -109,11 +115,12 @@ class _HomeScreenState extends State<HomeScreen> {
                 }
               });
             }
-          } catch (e) {
+          } catch (e, stackTrace) {
             debugPrint('❌ Error opening checkout: $e');
+            debugPrint('❌ Stack trace: $stackTrace');
             
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
+            if (mounted && parentContext.mounted) {
+              parentScaffoldMessenger.showSnackBar(
                 SnackBar(
                   content: Text('Error: ${e.toString()}'),
                   backgroundColor: Colors.red,
