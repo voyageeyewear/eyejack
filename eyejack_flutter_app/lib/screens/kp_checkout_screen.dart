@@ -1,8 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:gokwik/checkout/kp_checkout.dart';
 import 'package:gokwik/config/types.dart';
-import 'package:webview_flutter/webview_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
-import 'dart:convert';
 
 class KPCheckoutScreen extends StatefulWidget {
   final String? cartId;
@@ -13,6 +12,7 @@ class KPCheckoutScreen extends StatefulWidget {
   final String? gaTrackingID;
   final String? webEngageID;
   final String? moEngageID;
+  final String? checkoutUrl; // Shopify checkout URL
   final Map<String, String>? utmParams;
 
   const KPCheckoutScreen({
@@ -25,6 +25,7 @@ class KPCheckoutScreen extends StatefulWidget {
     this.gaTrackingID,
     this.webEngageID,
     this.moEngageID,
+    this.checkoutUrl,
     this.utmParams,
   });
 
@@ -33,12 +34,23 @@ class KPCheckoutScreen extends StatefulWidget {
 }
 
 class _KPCheckoutScreenState extends State<KPCheckoutScreen> {
-  void _handleEvent(Map<String, dynamic> message) {
-    debugPrint('📨 Received event from WebView: ${message['eventname']}');
-    debugPrint('📨 Event data: ${message['data']}');
+  void _handleEvent(dynamic message) {
+    // Handle both Map and other types
+    Map<String, dynamic>? messageMap;
+    if (message is Map<String, dynamic>) {
+      messageMap = message;
+    } else if (message is Map) {
+      messageMap = Map<String, dynamic>.from(message);
+    } else {
+      debugPrint('⚠️ Unexpected message type: ${message.runtimeType}');
+      return;
+    }
+    
+    debugPrint('📨 Received event from WebView: ${messageMap['eventname']}');
+    debugPrint('📨 Event data: ${messageMap['data']}');
 
-    final eventName = message['eventname'] as String?;
-    final eventData = message['data'] as Map<String, dynamic>?;
+    final eventName = messageMap['eventname'] as String?;
+    final eventData = messageMap['data'] as Map<String, dynamic>?;
 
     switch (eventName) {
       case 'modal_closed':
@@ -99,30 +111,62 @@ class _KPCheckoutScreenState extends State<KPCheckoutScreen> {
     }
   }
 
-  String _buildCheckoutUrl() {
-    // Build checkout URL with parameters
-    final baseUrl = 'https://checkout.gokwik.co/init';
-    final params = <String, String>{};
-    
-    if (widget.cartId != null && widget.cartId!.isNotEmpty) {
-      params['cartId'] = widget.cartId!;
-    }
-    if (widget.storefrontToken.isNotEmpty) {
-      params['storefrontToken'] = widget.storefrontToken;
-    }
-    if (widget.storeId != null && widget.storeId!.isNotEmpty) {
-      params['storeId'] = widget.storeId!;
-    }
-    if (widget.sessionId != null && widget.sessionId!.isNotEmpty) {
-      params['sessionId'] = widget.sessionId!;
-    }
-    
-    final uri = Uri.parse(baseUrl).replace(queryParameters: params);
-    return uri.toString();
-  }
-
   @override
   Widget build(BuildContext context) {
+    debugPrint('🔧 Building KPCheckout with:');
+    debugPrint('   cartId: ${widget.cartId}');
+    debugPrint('   storefrontToken: ${widget.storefrontToken.substring(0, 10)}...');
+    debugPrint('   storeId: ${widget.storeId}');
+    debugPrint('   checkoutUrl: ${widget.checkoutUrl}');
+    
+    // Build MerchantParams from widget properties
+    // Extract merchantCheckoutId from checkoutUrl if available
+    String? merchantCheckoutId;
+    if (widget.checkoutUrl != null && widget.checkoutUrl!.isNotEmpty) {
+      // Extract checkout ID from URL like: https://eyejack.in/cart/c/{checkoutId}?key=...
+      final match = RegExp(r'/c/([^/?]+)').firstMatch(widget.checkoutUrl!);
+      if (match != null) {
+        merchantCheckoutId = match.group(1);
+        debugPrint('✅ Extracted merchantCheckoutId: $merchantCheckoutId');
+      }
+    }
+    
+    final merchantParams = MerchantParams(
+      merchantCheckoutId: merchantCheckoutId,
+      cartId: widget.cartId ?? '',
+      storefrontToken: widget.storefrontToken,
+      storeId: widget.storeId ?? '19g6iluwldmy4',
+      sessionId: widget.sessionId,
+      fbPixel: widget.fpixel, // Note: SDK uses fbPixel, not fpixel
+      gaTrackingID: widget.gaTrackingID,
+      webEngageID: widget.webEngageID,
+      moEngageID: widget.moEngageID,
+      utmParams: widget.utmParams,
+    );
+
+    // Build CheckoutData with MerchantParams
+    final checkoutData = CheckoutData(
+      merchantParams: merchantParams,
+    );
+
+    // Build KPCheckoutProps
+    final kpCheckoutProps = KPCheckoutProps(
+      checkoutData: checkoutData,
+      onEvent: _handleEvent,
+      onError: (error) {
+        debugPrint('❌ KPCheckout error: $error');
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Checkout error: $error'),
+              backgroundColor: Colors.red,
+              duration: const Duration(seconds: 3),
+            ),
+          );
+        }
+      },
+    );
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Checkout'),
@@ -133,151 +177,10 @@ class _KPCheckoutScreenState extends State<KPCheckoutScreen> {
           },
         ),
       ),
-      body: KPCheckoutWidget(
-        checkoutData: CheckoutShopifyProps(
-          cartId: widget.cartId,
-          storefrontToken: widget.storefrontToken,
-          storeId: widget.storeId,
-          sessionId: widget.sessionId,
-          fpixel: widget.fpixel,
-          utmParams: widget.utmParams != null 
-              ? UTMParams(
-                  utmSource: widget.utmParams!['utm_source'],
-                  utmMedium: widget.utmParams!['utm_medium'],
-                  utmCampaign: widget.utmParams!['utm_campaign'],
-                  utmTerm: widget.utmParams!['utm_term'],
-                  utmContent: widget.utmParams!['utm_content'],
-                  landingPage: widget.utmParams!['landing_page'],
-                  origReferrer: widget.utmParams!['orig_referrer'],
-                )
-              : null,
-        ),
-        onEvent: _handleEvent,
+      body: KPCheckout(
+        checkoutData: kpCheckoutProps,
       ),
     );
-  }
-}
-
-// KPCheckout Widget implementation as per documentation
-class KPCheckoutWidget extends StatelessWidget {
-  final CheckoutShopifyProps checkoutData;
-  final void Function(Map<String, dynamic>) onEvent;
-
-  const KPCheckoutWidget({
-    super.key,
-    required this.checkoutData,
-    required this.onEvent,
-  });
-
-  String _buildCheckoutUrl() {
-    final baseUrl = 'https://checkout.gokwik.co/init';
-    final params = <String, String>{};
-    
-    if (checkoutData.cartId != null && checkoutData.cartId!.isNotEmpty) {
-      params['cartId'] = checkoutData.cartId!;
-    }
-    if (checkoutData.storefrontToken != null && checkoutData.storefrontToken!.isNotEmpty) {
-      params['storefrontToken'] = checkoutData.storefrontToken!;
-    }
-    if (checkoutData.storeId != null && checkoutData.storeId!.isNotEmpty) {
-      params['storeId'] = checkoutData.storeId!;
-    }
-    if (checkoutData.sessionId != null && checkoutData.sessionId!.isNotEmpty) {
-      params['sessionId'] = checkoutData.sessionId!;
-    }
-    
-    // Add UTM parameters if available
-    if (checkoutData.utmParams != null) {
-      params.addAll(checkoutData.utmParams!.toQueryMap());
-    }
-    
-    final uri = Uri.parse(baseUrl).replace(queryParameters: params);
-    return uri.toString();
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final controller = WebViewController()
-      ..setJavaScriptMode(JavaScriptMode.unrestricted)
-      ..addJavaScriptChannel(
-        'KwikPassEventChannel',
-        onMessageReceived: (JavaScriptMessage msg) {
-          try {
-            final parsed = json.decode(msg.message) as Map<String, dynamic>;
-            onEvent(parsed);
-          } catch (e) {
-            debugPrint('❌ Error parsing WebView message: $e');
-          }
-        },
-      )
-      ..setNavigationDelegate(
-        NavigationDelegate(
-          onPageStarted: (String url) {
-            debugPrint('🌐 WebView page started: $url');
-          },
-          onPageFinished: (String url) {
-            debugPrint('✅ WebView page finished: $url');
-          },
-          onWebResourceError: (WebResourceError error) {
-            debugPrint('❌ WebView error: ${error.description}');
-          },
-        ),
-      )
-      ..loadRequest(Uri.parse(_buildCheckoutUrl()));
-
-    return WebViewWidget(controller: controller);
-  }
-}
-
-// CheckoutShopifyProps class as per documentation
-class CheckoutShopifyProps {
-  final String? cartId;
-  final String? storefrontToken;
-  final String? storeId;
-  final String? sessionId;
-  final String? fpixel;
-  final UTMParams? utmParams;
-
-  CheckoutShopifyProps({
-    this.cartId,
-    this.storefrontToken,
-    this.storeId,
-    this.sessionId,
-    this.fpixel,
-    this.utmParams,
-  });
-}
-
-// UTMParams class as per documentation
-class UTMParams {
-  final String? utmSource;
-  final String? utmMedium;
-  final String? utmCampaign;
-  final String? utmTerm;
-  final String? utmContent;
-  final String? landingPage;
-  final String? origReferrer;
-
-  UTMParams({
-    this.utmSource,
-    this.utmMedium,
-    this.utmCampaign,
-    this.utmTerm,
-    this.utmContent,
-    this.landingPage,
-    this.origReferrer,
-  });
-
-  Map<String, String> toQueryMap() {
-    return {
-      if (utmSource != null) 'utm_source': utmSource!,
-      if (utmMedium != null) 'utm_medium': utmMedium!,
-      if (utmCampaign != null) 'utm_campaign': utmCampaign!,
-      if (utmTerm != null) 'utm_term': utmTerm!,
-      if (utmContent != null) 'utm_content': utmContent!,
-      if (landingPage != null) 'landing_page': landingPage!,
-      if (origReferrer != null) 'orig_referrer': origReferrer!,
-    };
   }
 }
 

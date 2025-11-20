@@ -67,54 +67,77 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
             );
             
-            // Get cart data
-            final cartData = await ApiService().getCart();
+            // Create GoKwik checkout through backend API (this handles the proper integration)
+            debugPrint('📞 Calling backend API to create GoKwik checkout...');
+            final gokwikCheckoutData = await ApiService().createGokwikCheckout();
             
-            // Try both 'id' and 'cartId' fields (API might return either)
-            final cartId = cartData['id']?.toString() ?? cartData['cartId']?.toString();
+            debugPrint('✅ GoKwik checkout data: $gokwikCheckoutData');
             
+            // Extract checkout URL from backend response
+            final checkoutUrl = gokwikCheckoutData['checkoutUrl']?.toString();
+            final cartId = gokwikCheckoutData['cartId']?.toString();
+            final merchantId = gokwikCheckoutData['merchantId']?.toString() ?? '19g6iluwldmy4';
+            
+            debugPrint('✅ Checkout URL: $checkoutUrl');
             debugPrint('✅ Cart ID: $cartId');
-            debugPrint('✅ Cart data: $cartData');
+            debugPrint('✅ Merchant ID: $merchantId');
             
-            if (cartId == null || cartId.isEmpty) {
-              throw Exception('Cart is empty. Please add items to cart first.');
+            if (checkoutUrl == null || checkoutUrl.isEmpty) {
+              throw Exception('Failed to create checkout URL. Please try again.');
             }
             
-            // Extract cart ID (remove gid://shopify/Cart/ prefix if present)
-            String cleanCartId = cartId;
-            if (cartId.contains('gid://shopify/Cart/')) {
-              final match = RegExp(r'gid://shopify/Cart/([^?]+)').firstMatch(cartId);
+            // Extract clean cart ID if needed
+            String cleanCartId = cartId ?? '';
+            if (cleanCartId.contains('gid://shopify/Cart/')) {
+              final match = RegExp(r'gid://shopify/Cart/([^?]+)').firstMatch(cleanCartId);
               if (match != null && match.group(1) != null) {
                 cleanCartId = match.group(1)!;
-                debugPrint('✅ Extracted clean cart ID: $cleanCartId');
               }
             }
             
-            debugPrint('🚀 Navigating to checkout with cartId: $cleanCartId');
+            debugPrint('🚀 Navigating to checkout with URL: $checkoutUrl');
             
             // Navigate to Kwikpass Checkout screen using the parent navigator
-            if (mounted && parentContext.mounted) {
-              await parentNavigator.push(
-                MaterialPageRoute(
-                  builder: (context) => KPCheckoutScreen(
-                    cartId: cleanCartId,
-                    storefrontToken: '0032c089ead422dfbfaa0ffcbbddcc97', // Storefront API token
-                    storeId: '19g6iluwldmy4', // Merchant ID
-                  ),
-                ),
-              ).then((result) {
-                // Handle checkout result
-                if (result == true && mounted && parentContext.mounted) {
-                  parentScaffoldMessenger.showSnackBar(
-                    const SnackBar(
-                      content: Text('✅ Order placed successfully!'),
-                      backgroundColor: Color(0xFF27916D),
-                      duration: Duration(seconds: 3),
+            // Use a post-frame callback to ensure navigation happens after modal is fully closed
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && parentContext.mounted) {
+                debugPrint('✅ Context is valid, pushing checkout screen...');
+                parentNavigator.push(
+                  MaterialPageRoute(
+                    builder: (context) => KPCheckoutScreen(
+                      cartId: cleanCartId.isNotEmpty ? cleanCartId : null,
+                      storefrontToken: '0032c089ead422dfbfaa0ffcbbddcc97', // Storefront API token
+                      storeId: merchantId, // Merchant ID from backend
+                      checkoutUrl: checkoutUrl, // Use checkout URL from backend
                     ),
-                  );
-                }
-              });
-            }
+                  ),
+                ).then((result) {
+                  // Handle checkout result
+                  if (result == true && mounted && parentContext.mounted) {
+                    parentScaffoldMessenger.showSnackBar(
+                      const SnackBar(
+                        content: Text('✅ Order placed successfully!'),
+                        backgroundColor: Color(0xFF27916D),
+                        duration: Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                }).catchError((error) {
+                  debugPrint('❌ Navigation error: $error');
+                  if (mounted && parentContext.mounted) {
+                    parentScaffoldMessenger.showSnackBar(
+                      SnackBar(
+                        content: Text('Error navigating to checkout: $error'),
+                        backgroundColor: Colors.red,
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                });
+              } else {
+                debugPrint('❌ Context not valid for navigation');
+              }
+            });
           } catch (e, stackTrace) {
             debugPrint('❌ Error opening checkout: $e');
             debugPrint('❌ Stack trace: $stackTrace');
@@ -238,20 +261,34 @@ class _HomeScreenState extends State<HomeScreen> {
           ),
           Expanded(
             child: Center(
-              child: Image.network(
-                'https://eyejack.in/cdn/shop/files/colored-logo.png',
-                height: 32,
-                fit: BoxFit.contain,
-                errorBuilder: (context, error, stackTrace) {
-                  return const Text(
-                    'Eyejack',
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Image.network(
+                    'https://eyejack.in/cdn/shop/files/colored-logo.png',
+                    height: 28,
+                    fit: BoxFit.contain,
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Text(
+                        'Eyejack',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      );
+                    },
+                  ),
+                  // Version display
+                  const Text(
+                    'v12.24.0 (156)',
                     style: TextStyle(
-                      color: Colors.white,
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
+                      color: Colors.white70,
+                      fontSize: 9,
+                      fontWeight: FontWeight.normal,
                     ),
-                  );
-                },
+                  ),
+                ],
               ),
             ),
           ),

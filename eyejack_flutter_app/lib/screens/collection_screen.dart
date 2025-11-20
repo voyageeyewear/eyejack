@@ -10,6 +10,7 @@ import '../providers/shop_provider.dart';
 import '../providers/collection_settings_provider.dart';
 import '../services/api_service.dart';
 import '../screens/product_detail_screen.dart';
+import '../screens/kp_checkout_screen.dart';
 import '../widgets/collection_banner_widget.dart';
 import '../widgets/cart_drawer.dart';
 
@@ -66,74 +67,127 @@ class _CollectionScreenState extends State<CollectionScreen> {
   }
   
   void _showCartDrawer() {
+    // Store the parent context and navigator before opening modal
+    final parentContext = context;
+    final parentNavigator = Navigator.of(context);
+    final parentScaffoldMessenger = ScaffoldMessenger.of(context);
+    
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => CartDrawer(
+      builder: (modalContext) => CartDrawer(
         onCheckout: () async {
-          Navigator.pop(context); // Close cart drawer
+          // Close the modal first
+          Navigator.pop(modalContext);
+          
+          // Wait a bit for modal to close completely
+          await Future.delayed(const Duration(milliseconds: 300));
           
           try {
-            debugPrint('🛒 Opening Shopify checkout...');
+            debugPrint('🛒 Opening Kwikpass checkout...');
             
-            // Show loading indicator
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Row(
-                    children: [
-                      SizedBox(
-                        width: 20,
-                        height: 20,
-                        child: CircularProgressIndicator(
-                          strokeWidth: 2,
-                          color: Colors.white,
-                        ),
+            // Show loading indicator using the parent context
+            parentScaffoldMessenger.showSnackBar(
+              const SnackBar(
+                content: Row(
+                  children: [
+                    SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: Colors.white,
                       ),
-                      SizedBox(width: 12),
-                      Text('Preparing checkout...'),
-                    ],
-                  ),
-                  backgroundColor: Color(0xFF27916D),
-                  duration: Duration(seconds: 2),
+                    ),
+                    SizedBox(width: 12),
+                    Text('Opening checkout...'),
+                  ],
                 ),
-              );
-            }
+                backgroundColor: Color(0xFF27916D),
+                duration: Duration(seconds: 2),
+              ),
+            );
             
-            // Get Shopify checkout URL from cart
-            final cartData = await ApiService().getCart();
-            final checkoutUrl = cartData['checkoutUrl'] as String?;
+            // Create GoKwik checkout through backend API (this handles the proper integration)
+            debugPrint('📞 Calling backend API to create GoKwik checkout...');
+            final gokwikCheckoutData = await ApiService().createGokwikCheckout();
+            
+            debugPrint('✅ GoKwik checkout data: $gokwikCheckoutData');
+            
+            // Extract checkout URL from backend response
+            final checkoutUrl = gokwikCheckoutData['checkoutUrl']?.toString();
+            final cartId = gokwikCheckoutData['cartId']?.toString();
+            final merchantId = gokwikCheckoutData['merchantId']?.toString() ?? '19g6iluwldmy4';
+            
+            debugPrint('✅ Checkout URL: $checkoutUrl');
+            debugPrint('✅ Cart ID: $cartId');
+            debugPrint('✅ Merchant ID: $merchantId');
             
             if (checkoutUrl == null || checkoutUrl.isEmpty) {
-              throw Exception('Checkout URL not available');
+              throw Exception('Failed to create checkout URL. Please try again.');
             }
             
-            debugPrint('✅ Shopify checkout URL: $checkoutUrl');
-            
-            // Open Shopify checkout in in-app browser
-            if (mounted) {
-              final Uri uri = Uri.parse(checkoutUrl);
-              final launched = await launchUrl(
-                uri,
-                mode: LaunchMode.inAppWebView,
-                webViewConfiguration: const WebViewConfiguration(
-                  enableJavaScript: true,
-                  enableDomStorage: true,
-                ),
-              );
-              
-              if (launched) {
-                debugPrint('✅ Shopify checkout opened in app');
-              } else {
-                throw Exception('Could not launch checkout');
+            // Extract clean cart ID if needed
+            String cleanCartId = cartId ?? '';
+            if (cleanCartId.contains('gid://shopify/Cart/')) {
+              final match = RegExp(r'gid://shopify/Cart/([^?]+)').firstMatch(cleanCartId);
+              if (match != null && match.group(1) != null) {
+                cleanCartId = match.group(1)!;
               }
             }
-          } catch (e) {
-            debugPrint('❌ Error opening Shopify checkout: $e');
             
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
+            debugPrint('🚀 Navigating to checkout with URL: $checkoutUrl');
+            
+            // Navigate to Kwikpass Checkout screen using the parent navigator
+            // Use a post-frame callback to ensure navigation happens after modal is fully closed
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted && parentContext.mounted) {
+                debugPrint('✅ Context is valid, pushing checkout screen...');
+                parentNavigator.push(
+                  MaterialPageRoute(
+                    builder: (context) => KPCheckoutScreen(
+                      cartId: cleanCartId.isNotEmpty ? cleanCartId : null,
+                      storefrontToken: '0032c089ead422dfbfaa0ffcbbddcc97', // Storefront API token
+                      storeId: merchantId, // Merchant ID from backend
+                      checkoutUrl: checkoutUrl, // Use checkout URL from backend
+                    ),
+                  ),
+                ).then((result) {
+                  // Handle checkout result
+                  if (result == true && mounted && parentContext.mounted) {
+                    parentScaffoldMessenger.showSnackBar(
+                      const SnackBar(
+                        content: Text('✅ Order placed successfully!'),
+                        backgroundColor: Color(0xFF27916D),
+                        duration: Duration(seconds: 3),
+                      ),
+                    );
+                    // Refresh cart count after successful order
+                    _loadCartCount();
+                  }
+                }).catchError((error) {
+                  debugPrint('❌ Navigation error: $error');
+                  if (mounted && parentContext.mounted) {
+                    parentScaffoldMessenger.showSnackBar(
+                      SnackBar(
+                        content: Text('Error navigating to checkout: $error'),
+                        backgroundColor: Colors.red,
+                        duration: const Duration(seconds: 3),
+                      ),
+                    );
+                  }
+                });
+              } else {
+                debugPrint('❌ Context not valid for navigation');
+              }
+            });
+          } catch (e, stackTrace) {
+            debugPrint('❌ Error opening checkout: $e');
+            debugPrint('❌ Stack trace: $stackTrace');
+            
+            if (mounted && parentContext.mounted) {
+              parentScaffoldMessenger.showSnackBar(
                 SnackBar(
                   content: Text('Error: ${e.toString()}'),
                   backgroundColor: Colors.red,
