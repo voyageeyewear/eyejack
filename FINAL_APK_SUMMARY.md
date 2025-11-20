@@ -146,3 +146,5 @@ Just update the Shopify theme settings to enable video slides, and everything wi
 
 
 
+
+

@@ -246,3 +246,5 @@ adb shell pm clear com.eyejack.shopify_app
 
 **Your product page is now slim, sleek, and professional! 🎉**
 
+
+

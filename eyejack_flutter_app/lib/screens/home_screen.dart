@@ -5,7 +5,7 @@ import '../widgets/section_renderer.dart';
 import '../widgets/cart_drawer.dart';
 import '../widgets/footer_widget.dart';
 import '../services/api_service.dart';
-import '../services/gokwik_service.dart';
+import '../screens/kp_checkout_screen.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -34,7 +34,7 @@ class _HomeScreenState extends State<HomeScreen> {
           Navigator.pop(context); // Close cart drawer
           
           try {
-            debugPrint('🛒 Opening GoKwik checkout...');
+            debugPrint('🛒 Opening Kwikpass checkout...');
             
             // Show loading indicator
             if (mounted) {
@@ -51,7 +51,7 @@ class _HomeScreenState extends State<HomeScreen> {
                         ),
                       ),
                       SizedBox(width: 12),
-                      Text('Opening GoKwik checkout...'),
+                      Text('Opening checkout...'),
                     ],
                   ),
                   backgroundColor: Color(0xFF27916D),
@@ -60,24 +60,45 @@ class _HomeScreenState extends State<HomeScreen> {
               );
             }
             
-            // Create GoKwik checkout
-            final checkoutData = await ApiService().createGokwikCheckout();
-            final checkoutUrl = checkoutData['checkoutUrl'] as String;
+            // Get cart data
+            final cartData = await ApiService().getCart();
             
-            debugPrint('✅ GoKwik checkout URL: $checkoutUrl');
-            debugPrint('✅ Cart data: $checkoutData');
+            // Try both 'id' and 'cartId' fields (API might return either)
+            final cartId = cartData['id']?.toString() ?? cartData['cartId']?.toString();
             
-            // Open GoKwik native checkout
+            debugPrint('✅ Cart ID: $cartId');
+            debugPrint('✅ Cart data: $cartData');
+            
+            if (cartId == null || cartId.isEmpty) {
+              throw Exception('Cart is empty. Please add items to cart first.');
+            }
+            
+            // Extract cart ID (remove gid://shopify/Cart/ prefix if present)
+            String cleanCartId = cartId;
+            if (cartId.contains('gid://shopify/Cart/')) {
+              final match = RegExp(r'gid://shopify/Cart/([^?]+)').firstMatch(cartId);
+              if (match != null) {
+                cleanCartId = match.group(1)!;
+                debugPrint('✅ Extracted clean cart ID: $cleanCartId');
+              }
+            }
+            
+            debugPrint('🚀 Navigating to checkout with cartId: $cleanCartId');
+            
+            // Navigate to Kwikpass Checkout screen
             if (mounted) {
-              final success = await GokwikService.openCheckout(
-                context: context,
-                checkoutUrl: checkoutUrl,
-                cartData: checkoutData,
-              );
-
-              // Handle checkout result
-              if (mounted) {
-                if (success) {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => KPCheckoutScreen(
+                    cartId: cleanCartId,
+                    storefrontToken: '0032c089ead422dfbfaa0ffcbbddcc97', // Storefront API token
+                    storeId: '19g6iluwldmy4', // Merchant ID
+                  ),
+                ),
+              ).then((result) {
+                // Handle checkout result
+                if (result == true && mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('✅ Order placed successfully!'),
@@ -85,19 +106,11 @@ class _HomeScreenState extends State<HomeScreen> {
                       duration: Duration(seconds: 3),
                     ),
                   );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('❌ Checkout was not completed'),
-                      backgroundColor: Colors.red,
-                      duration: Duration(seconds: 3),
-                    ),
-                  );
                 }
-              }
+              });
             }
           } catch (e) {
-            debugPrint('❌ Error opening GoKwik checkout: $e');
+            debugPrint('❌ Error opening checkout: $e');
             
             if (mounted) {
               ScaffoldMessenger.of(context).showSnackBar(

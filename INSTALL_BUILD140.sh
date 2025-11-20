@@ -17,3 +17,5 @@ adb shell pm clear com.eyejack.shopify_app
 
 echo "✅ Done!"
 
+
+

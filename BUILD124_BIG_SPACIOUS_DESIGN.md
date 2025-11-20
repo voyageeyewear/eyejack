@@ -198,3 +198,5 @@ The app is now running on your emulator with the new spacious design! Navigate t
 Check your emulator now to see the beautiful new design!
 
 
+
+

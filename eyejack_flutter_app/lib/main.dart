@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:gokwik/config/types.dart';
+import 'package:gokwik/go_kwik_client.dart';
 import 'providers/shop_provider.dart';
 import 'providers/collection_settings_provider.dart';
 import 'screens/splash_screen.dart';
@@ -9,20 +11,31 @@ import 'screens/collection_screen.dart';
 import 'screens/search_screen.dart';
 import 'models/product_model.dart';
 import 'models/collection_model.dart';
-import 'services/gokwik_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   
-  // Initialize GoKwik SDK
-  try {
-    await GokwikService.initialize();
-  } catch (e) {
-    debugPrint('⚠️ GoKwik initialization failed: $e');
-    // Continue app startup even if GoKwik fails
-  }
+  // Initialize Kwikpass SDK
+  await _initializeKwikpassSDK();
   
   runApp(const MyApp());
+}
+
+Future<void> _initializeKwikpassSDK() async {
+  try {
+    debugPrint('🚀 Initializing Kwikpass SDK...');
+    await GoKwikClient.instance.initializeSDK(
+      InitializeSdkProps(
+        mid: '19g6iluwldmy4', // Merchant ID
+        environment: Environment.production, // production or sandbox
+        isSnowplowTrackingEnabled: true, // optional (default is true)
+      ),
+    );
+    debugPrint('✅ Kwikpass SDK initialized successfully!');
+  } catch (err) {
+    debugPrint('⚠️ Kwikpass SDK initialization failed: $err');
+    // Continue app startup even if SDK initialization fails
+  }
 }
 
 class MyApp extends StatelessWidget {
