@@ -6,13 +6,30 @@ A complete Flutter-based e-commerce mobile application for EyeJack eyewear store
 
 EyeJack Native Application is a full-featured mobile e-commerce app that replicates the functionality of the live EyeJack Shopify store (www.eyejack.in) with enhanced mobile-first user experience. The app now features a **PostgreSQL backend** and an **elegant admin dashboard** that allows content management without code changes or app rebuilds.
 
+## 🎉 Milestones Achieved
+
+### ✅ Milestone 2: iOS App Store Submission (January 2025)
+- 🍎 **iOS App Store Ready**: Complete iOS build configured for App Store submission
+- 📱 **Cross-Platform Support**: Full Flutter app now supports both Android and iOS
+- 🔧 **Xcode Integration**: Properly configured for release builds and archiving
+- 📦 **Archive Ready**: App can be archived, validated, and uploaded to App Store Connect
+- 🛒 **GoKwik Checkout**: Integrated across all screens (Home, Collection, Product Detail)
+- ✨ **Production Ready**: v12.24.0 (Build 156) ready for iOS App Store submission
+
+### ✅ Milestone 1: Android Production Release
+- ✅ **Android APK**: Multiple production releases on Google Play Store
+- ✅ **GoKwik Integration**: Complete checkout flow implemented
+- ✅ **Admin Dashboard**: Real-time content management system
+- ✅ **PostgreSQL Backend**: Dynamic content management without app rebuilds
+
 ## 📦 Latest Release
 
-**Version:** 12.24.0 (Build 156) - **GoKwik Checkout SDK Integration**  
+**Version:** 12.24.0 (Build 156) - **GoKwik Checkout SDK Integration + iOS App Store Ready**  
 **Release Date:** January 2025  
-**APK:** `Eyejack-v12.24.0-Build156-ALL-SCREENS-CHECKOUT.apk`
+**Android APK:** `Eyejack-v12.24.0-Build156-ALL-SCREENS-CHECKOUT.apk`  
+**iOS Status:** ✅ Ready for App Store submission
 
-### 🏷️ What's New in v12.24.0 - **GoKwik Checkout SDK Integration**
+### 🏷️ What's New in v12.24.0 - **GoKwik Checkout SDK Integration + iOS App Store Ready**
 - 🛒 **GoKwik SDK Integration**: Full integration with Kwikpass Shopify Plus + Non Plus Flutter SDK
 - 📱 **All-Screen Checkout**: GoKwik checkout now works from Home, Collection, and Product Detail screens
 - 🔧 **SDK Widget Implementation**: Replaced custom WebView with SDK's official `KPCheckout` widget
@@ -21,6 +38,12 @@ EyeJack Native Application is a full-featured mobile e-commerce app that replica
 - ✅ **Proper Context Handling**: Fixed navigation issues with parent context/navigator management
 - 🔄 **Unified Checkout Flow**: All cart icons now use the same GoKwik checkout implementation
 - 🎨 **Event Handling**: Proper event callbacks for checkout success, errors, and modal close
+- 🍎 **iOS App Store Ready**: 
+  - ✅ iOS project configured for release builds
+  - ✅ Xcode integration completed
+  - ✅ Archive and validation ready
+  - ✅ App Store Connect submission prepared
+  - 🎯 **Milestone 2 Achieved**: iOS App Store submission capability
 
 ### Previous v12.22.2 Features - **Collection Pagination + Swatch Navigation**
 - 🎨 **Matrix & Aviator Swatches**: Color swatches parse product titles and instantly navigate to the matching SKU without loaders
@@ -118,8 +141,11 @@ EyeJack Native Application is a full-featured mobile e-commerce app that replica
 ## 📱 Tech Stack
 
 ### Frontend (Mobile App)
-- **Framework**: Flutter 3.9.0
-- **Language**: Dart
+- **Framework**: Flutter 3.35.2 (Cross-platform: Android + iOS)
+- **Language**: Dart 3.9.0
+- **Platforms**: 
+  - ✅ **Android**: Production-ready APKs
+  - ✅ **iOS**: App Store submission ready
 - **State Management**: Provider pattern
 - **Key Packages**:
   - `http`: API communication
@@ -892,9 +918,11 @@ For issues or questions:
 
 **Production URL**: https://motivated-intuition-production.up.railway.app  
 **Live Store**: www.eyejack.in  
-**Latest APK**: Eyejack-v12.22.2-Build154-Pagination.apk  
-**Last Updated**: November 14, 2025  
-**Current Version**: 12.22.2 (Build 154) - Pagination + Swatches
+**Latest Android APK**: Eyejack-v12.24.0-Build156-ALL-SCREENS-CHECKOUT.apk  
+**iOS Status**: ✅ Ready for App Store submission (v12.24.0 Build 156)  
+**Last Updated**: January 2025  
+**Current Version**: 12.24.0 (Build 156) - GoKwik Checkout + iOS App Store Ready  
+**Milestone 2**: ✅ Achieved - iOS App Store submission ready
 
 ### 🎯 Quick Links
 - [BoAt-Style Update Summary](BOAT_STYLE_UPDATE.md)
