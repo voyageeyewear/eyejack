@@ -203,43 +203,41 @@ class _ReviewsList extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // If reviews are empty but we have a product ID, try to load Loox widget in WebView
-    // This happens when Loox stores reviews on their servers and loads via iframe
-    if (reviews.isEmpty) {
-      debugPrint('🔍 Reviews list is empty. Checking productId: $productId');
-      
-      // If we have a product ID, show Loox widget in WebView
-      if (productId != null && productId!.isNotEmpty && productId! != '0') {
-        debugPrint('✅ Showing Loox WebView for productId: $productId');
-        return _LooxWidgetWebView(productId: productId!);
-      }
-      
-      debugPrint('⚠️ No valid productId found. productId: $productId');
-      // Otherwise show default message
-      return Padding(
+    // Always show WebView if we have a product ID, even if reviews array is empty
+    // This ensures Loox reviews are always displayed from their servers
+    if (productId != null && productId!.isNotEmpty && productId! != '0') {
+      debugPrint('✅ Showing Loox WebView for productId: $productId (reviews count: ${reviews.length})');
+      return _LooxWidgetWebView(productId: productId!);
+    }
+    
+    // If we have parsed reviews and no productId, show them
+    if (reviews.isNotEmpty) {
+      return ListView.separated(
+        shrinkWrap: true,
+        physics: const NeverScrollableScrollPhysics(),
         padding: const EdgeInsets.all(16),
-        child: Text(
-          'No reviews available yet.',
-          style: TextStyle(
-            color: Colors.grey.shade600,
-            fontSize: 14,
-          ),
-        ),
+        itemCount: reviews.length,
+        separatorBuilder: (context, index) => const SizedBox(height: 16),
+        itemBuilder: (context, index) {
+          return _ReviewCard(
+            review: reviews[index],
+            productTitle: productTitle,
+          );
+        },
       );
     }
-
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: const NeverScrollableScrollPhysics(),
+    
+    // Otherwise show default message
+    debugPrint('⚠️ No valid productId found and no reviews available.');
+    return Padding(
       padding: const EdgeInsets.all(16),
-      itemCount: reviews.length,
-      separatorBuilder: (context, index) => const SizedBox(height: 16),
-      itemBuilder: (context, index) {
-        return _ReviewCard(
-          review: reviews[index],
-          productTitle: productTitle,
-        );
-      },
+      child: Text(
+        'No reviews available yet.',
+        style: TextStyle(
+          color: Colors.grey.shade600,
+          fontSize: 14,
+        ),
+      ),
     );
   }
 }
