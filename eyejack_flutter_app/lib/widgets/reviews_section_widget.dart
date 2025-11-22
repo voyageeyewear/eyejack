@@ -203,11 +203,15 @@ class _ReviewsList extends StatelessWidget {
     // If reviews are empty but we have a product ID, try to load Loox widget in WebView
     // This happens when Loox stores reviews on their servers and loads via iframe
     if (reviews.isEmpty) {
+      debugPrint('🔍 Reviews list is empty. Checking productId: $productId');
+      
       // If we have a product ID, show Loox widget in WebView
       if (productId != null && productId!.isNotEmpty && productId! != '0') {
+        debugPrint('✅ Showing Loox WebView for productId: $productId');
         return _LooxWidgetWebView(productId: productId!);
       }
       
+      debugPrint('⚠️ No valid productId found. productId: $productId');
       // Otherwise show default message
       return Padding(
         padding: const EdgeInsets.all(16),

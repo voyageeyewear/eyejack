@@ -403,6 +403,23 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   Builder(
                     builder: (context) {
                       debugPrint('🎨 Building ReviewsSectionWidget - Count: ${_productReviews!.count}, Reviews: ${_productReviews!.reviews.length}');
+                      debugPrint('🎨 ProductReviews productId: ${_productReviews!.productId}');
+                      debugPrint('🎨 Product ID (raw): ${widget.product.id}');
+                      
+                      // Ensure productId is set in ProductReviews if missing
+                      if (_productReviews!.productId.isEmpty) {
+                        final cleanProductId = widget.product.id.replaceAll('gid://shopify/Product/', '');
+                        debugPrint('🔧 Setting productId in ProductReviews: $cleanProductId');
+                        _productReviews = review_models.ProductReviews(
+                          productId: cleanProductId,
+                          productTitle: _productReviews!.productTitle,
+                          productHandle: _productReviews!.productHandle,
+                          count: _productReviews!.count,
+                          averageRating: _productReviews!.averageRating,
+                          reviews: _productReviews!.reviews,
+                        );
+                      }
+                      
                       // Show reviews section if we have count > 0 OR if we have review objects
                       if (_productReviews!.count > 0 || _productReviews!.reviews.isNotEmpty) {
                         return ReviewsSectionWidget(
