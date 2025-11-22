@@ -120,6 +120,7 @@ class _CollapsibleReviewsSectionState extends State<_CollapsibleReviewsSection> 
             _ReviewsList(
               reviews: widget.reviewsData.reviews,
               productTitle: widget.productTitle,
+              productId: widget.reviewsData.productId,
             ),
         ],
       ),
@@ -517,5 +518,81 @@ class _ReviewMedia extends StatelessWidget {
     }
     
     return const SizedBox.shrink();
+  }
+}
+
+/// WebView widget to embed Loox reviews widget
+class _LooxWidgetWebView extends StatefulWidget {
+  final String productId;
+
+  const _LooxWidgetWebView({required this.productId});
+
+  @override
+  State<_LooxWidgetWebView> createState() => _LooxWidgetWebViewState();
+}
+
+class _LooxWidgetWebViewState extends State<_LooxWidgetWebView> {
+  late final WebViewController _controller;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeWebView();
+  }
+
+  void _initializeWebView() {
+    // Loox widget URL format: https://loox.io/widget/{MERCHANT_ID}/reviews/{PRODUCT_ID}
+    const looxMerchantId = 'PmGdDSBYpW'; // Your Loox merchant/widget ID from website
+    final looxWidgetUrl = 'https://loox.io/widget/$looxMerchantId/reviews/${widget.productId}?limit=20';
+    
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
+      ..setNavigationDelegate(
+        NavigationDelegate(
+          onPageStarted: (String url) {
+            setState(() {
+              _isLoading = true;
+            });
+          },
+          onPageFinished: (String url) {
+            setState(() {
+              _isLoading = false;
+            });
+          },
+          onWebResourceError: (WebResourceError error) {
+            debugPrint('Loox widget WebView error: ${error.description}');
+          },
+        ),
+      )
+      ..loadRequest(Uri.parse(looxWidgetUrl));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 600, // Fixed height for reviews widget
+      margin: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(8),
+        child: Stack(
+          children: [
+            WebViewWidget(controller: _controller),
+            if (_isLoading)
+              Container(
+                color: Colors.white,
+                child: const Center(
+                  child: CircularProgressIndicator(),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
   }
 }
