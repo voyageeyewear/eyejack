@@ -51,12 +51,16 @@ function parseLooxReviews(html) {
           console.log(`✅ Found JSON structure with ${jsonData.reviews.length} reviews`);
           return jsonData.reviews.map((review, index) => ({
             id: review.id || `review-${index}`,
-            name: review.name || review.customer_name || 'Anonymous',
-            text: review.text || review.review_text || review.comment || '',
-            rating: review.rating || review.stars || null,
-            date: review.date || review.created_at || null,
-            photos: review.photos || review.images || [],
-            isVerified: review.verified || review.is_verified || false,
+            name: review.name || review.customer_name || review.customer?.name || 'Anonymous',
+            text: review.text || review.review_text || review.comment || review.message || '',
+            rating: review.rating || review.stars || review.score || null,
+            date: review.date || review.created_at || review.review_date || null,
+            photos: review.photos || review.images || review.photo_urls || [],
+            isVerified: review.verified || review.is_verified || review.verified_purchase || false,
+            profilePicture: review.profilePicture || review.profile_picture || review.avatar || review.customer?.avatar || null,
+            videoUrl: review.videoUrl || review.video_url || review.video || null,
+            productImage: review.productImage || review.product_image || review.product?.image || null,
+            productName: review.productName || review.product_name || review.product?.name || null,
           }));
         }
       }
@@ -221,29 +225,133 @@ function parseLooxReviews(html) {
         }
       }
       
-      // Extract photos
+      // Extract photos (user-submitted photos)
       const photoMatches = Array.from(reviewHtml.matchAll(/<img[^>]*src="([^"]+)"[^>]*>/gi));
-      const photos = photoMatches.map(m => m[1]).filter(url => url && !url.includes('placeholder'));
+      const photos = photoMatches.map(m => m[1]).filter(url => {
+        if (!url) return false;
+        // Filter out placeholders, avatars, and profile pictures
+        const lowerUrl = url.toLowerCase();
+        return !lowerUrl.includes('placeholder') && 
+               !lowerUrl.includes('avatar') && 
+               !lowerUrl.includes('profile') &&
+               !lowerUrl.includes('default');
+      });
+      
+      // Extract profile picture/avatar
+      let profilePicture = null;
+      const profilePatterns = [
+        /<img[^>]*class="[^"]*avatar[^"]*"[^>]*src="([^"]+)"/i,
+        /<img[^>]*class="[^"]*profile[^"]*"[^>]*src="([^"]+)"/i,
+        /<img[^>]*class="[^"]*customer[^"]*"[^>]*src="([^"]+)"/i,
+        /"avatar"\s*:\s*"([^"]+)"/i,
+        /"profile_picture"\s*:\s*"([^"]+)"/i,
+        /"profilePicture"\s*:\s*"([^"]+)"/i,
+        /"customer_image"\s*:\s*"([^"]+)"/i,
+      ];
+      
+      for (const pattern of profilePatterns) {
+        const match = reviewHtml.match(pattern);
+        if (match && match[1]) {
+          profilePicture = match[1].trim();
+          break;
+        }
+      }
+      
+      // If no profile picture found, try to get first image that's not in photos
+      if (!profilePicture && photoMatches.length > 0) {
+        const firstImage = photoMatches[0][1];
+        if (firstImage && !photos.includes(firstImage)) {
+          profilePicture = firstImage;
+        }
+      }
+      
+      // Extract video URL
+      let videoUrl = null;
+      const videoPatterns = [
+        /<video[^>]*src="([^"]+)"/i,
+        /<iframe[^>]*src="([^"]+)"[^>]*youtube/i,
+        /<iframe[^>]*src="([^"]+)"[^>]*vimeo/i,
+        /"video_url"\s*:\s*"([^"]+)"/i,
+        /"videoUrl"\s*:\s*"([^"]+)"/i,
+        /"video"\s*:\s*"([^"]+)"/i,
+        /data-video="([^"]+)"/i,
+      ];
+      
+      for (const pattern of videoPatterns) {
+        const match = reviewHtml.match(pattern);
+        if (match && match[1]) {
+          videoUrl = match[1].trim();
+          break;
+        }
+      }
+      
+      // Extract product image and name
+      let productImage = null;
+      let productName = null;
+      
+      const productImagePatterns = [
+        /<img[^>]*class="[^"]*product[^"]*"[^>]*src="([^"]+)"/i,
+        /"product_image"\s*:\s*"([^"]+)"/i,
+        /"productImage"\s*:\s*"([^"]+)"/i,
+      ];
+      
+      for (const pattern of productImagePatterns) {
+        const match = reviewHtml.match(pattern);
+        if (match && match[1]) {
+          productImage = match[1].trim();
+          break;
+        }
+      }
+      
+      const productNamePatterns = [
+        /<div[^>]*class="[^"]*product[^"]*name[^"]*"[^>]*>(.*?)<\/div>/i,
+        /"product_name"\s*:\s*"([^"]+)"/i,
+        /"productName"\s*:\s*"([^"]+)"/i,
+      ];
+      
+      for (const pattern of productNamePatterns) {
+        const match = reviewHtml.match(pattern);
+        if (match && match[1]) {
+          productName = match[1].trim().replace(/<[^>]+>/g, '').trim();
+          break;
+        }
+      }
       
       // Extract verified badge
       const isVerified = /verified|verified.*purchase/i.test(reviewHtml);
+      
+      // Improve name extraction - try to get actual customer name from text
+      // Sometimes the name is in the text like "Sandeep .." or "Darshan D."
+      if (!name || name === 'Anonymous' || name.length < 2) {
+        // Try to extract name from text content (first few words before review text)
+        const textContent = reviewHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        // Look for patterns like "Name S." or "First Last" at the start
+        const nameFromText = textContent.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]*\.?)?)/);
+        if (nameFromText && nameFromText[1] && nameFromText[1].length > 2 && nameFromText[1].length < 30) {
+          name = nameFromText[1].trim();
+        }
+      }
       
       // Only add review if we have actual content (not just defaults)
       // Check if name is not 'Anonymous' and text is not empty/default
       const hasActualName = name && name !== 'Anonymous' && name.trim().length > 0;
       const hasActualText = text && text !== 'No review text available' && text.trim().length > 0;
       
-      if (hasActualName || hasActualText) {
+      if (hasActualName || hasActualText || profilePicture || videoUrl || photos.length > 0) {
         reviews.push({
           id: `review-${index}`,
           name: name || 'Anonymous',
-          text: text || 'No review text available',
+          text: text || '',
           rating: rating || null,
           date: date || null,
           photos: photos || [],
-          isVerified: isVerified
+          isVerified: isVerified,
+          profilePicture: profilePicture || null,
+          videoUrl: videoUrl || null,
+          productImage: productImage || null,
+          productName: productName || null,
         });
-        console.log(`✅ Parsed review ${index + 1}: ${name}, text length: ${text.length}, rating: ${rating}`);
+        console.log(`✅ Parsed review ${index + 1}: ${name}, text: ${text.substring(0, 50)}..., rating: ${rating}, profilePic: ${!!profilePicture}, video: ${!!videoUrl}, photos: ${photos.length}`);
       } else {
         console.log(`⚠️ Skipping review ${index + 1} - no actual content found. HTML sample: ${reviewHtml.substring(0, 200)}`);
       }
