@@ -207,7 +207,11 @@ class _ReviewsList extends StatelessWidget {
     // This ensures Loox reviews are always displayed from their servers
     if (productId != null && productId!.isNotEmpty && productId! != '0') {
       debugPrint('✅ Showing Loox WebView for productId: $productId (reviews count: ${reviews.length})');
-      return _LooxWidgetWebView(productId: productId!);
+      // Use key to prevent widget recreation on rebuilds
+      return _LooxWidgetWebView(
+        key: ValueKey('loox_webview_$productId'),
+        productId: productId!,
+      );
     }
     
     // If we have parsed reviews and no productId, show them
@@ -530,7 +534,7 @@ class _ReviewMedia extends StatelessWidget {
 class _LooxWidgetWebView extends StatefulWidget {
   final String productId;
 
-  const _LooxWidgetWebView({required this.productId});
+  const _LooxWidgetWebView({super.key, required this.productId});
 
   @override
   State<_LooxWidgetWebView> createState() => _LooxWidgetWebViewState();
@@ -547,6 +551,11 @@ class _LooxWidgetWebViewState extends State<_LooxWidgetWebView> {
   }
 
   void _initializeWebView() {
+    if (_isInitialized && _controller != null) {
+      debugPrint('⚠️ WebView already initialized, skipping...');
+      return;
+    }
+    
     // Loox widget URL format: https://loox.io/widget/{MERCHANT_ID}/reviews/{PRODUCT_ID}
     const looxMerchantId = 'PmGdDSBYpW'; // Your Loox merchant/widget ID from website
     
@@ -558,7 +567,7 @@ class _LooxWidgetWebViewState extends State<_LooxWidgetWebView> {
     
     // Load all reviews (no limit parameter = loads all) and hide the duplicate header
     final looxWidgetUrl = 'https://loox.io/widget/$looxMerchantId/reviews/$cleanProductId?limit=999';
-    debugPrint('🌐 Loading Loox widget URL: $looxWidgetUrl');
+    debugPrint('🌐 Initializing Loox WebView - URL: $looxWidgetUrl');
     debugPrint('🌐 Clean productId: $cleanProductId');
     
     _controller = WebViewController()
@@ -633,23 +642,59 @@ class _LooxWidgetWebViewState extends State<_LooxWidgetWebView> {
                 }, 1000);
               })();
             ''');
-            setState(() {
-              _isLoading = false;
-            });
+            if (mounted) {
+              setState(() {
+                _isLoading = false;
+              });
+            }
           },
           onWebResourceError: (WebResourceError error) {
             debugPrint('❌ Loox widget WebView error: ${error.description}');
             debugPrint('❌ Error code: ${error.errorCode}, Error type: ${error.errorType}');
+            if (mounted) {
+              setState(() {
+                _isLoading = false;
+              });
+            }
           },
         ),
       )
       ..loadRequest(Uri.parse(looxWidgetUrl));
+    
+    _isInitialized = true;
+    debugPrint('✅ WebView initialized and loading started');
+  }
+
+  @override
+  void dispose() {
+    debugPrint('🗑️ Disposing Loox WebView');
+    // Don't dispose controller - let it persist
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    // Ensure controller is initialized
+    if (_controller == null) {
+      debugPrint('⚠️ WebView controller is null, initializing...');
+      _initializeWebView();
+      return Container(
+        height: 2000,
+        margin: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: const Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+    }
+    
     // Use a very large height to show all reviews without scrolling
     // The WebView will handle internal scrolling if needed
+    debugPrint('🎨 Building Loox WebView widget (isLoading: $_isLoading)');
     return Container(
       height: 2000, // Large height to show all reviews
       margin: const EdgeInsets.all(16),
@@ -662,7 +707,7 @@ class _LooxWidgetWebViewState extends State<_LooxWidgetWebView> {
         borderRadius: BorderRadius.circular(8),
         child: Stack(
           children: [
-            WebViewWidget(controller: _controller),
+            WebViewWidget(controller: _controller!),
             if (_isLoading)
               Container(
                 color: Colors.white,

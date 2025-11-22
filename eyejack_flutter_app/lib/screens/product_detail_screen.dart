@@ -1214,11 +1214,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     
     // Ensure productId is set in ProductReviews if missing (without mutating state)
     review_models.ProductReviews reviewsData = _productReviews!;
-    if (reviewsData.productId.isEmpty) {
-      final cleanProductId = widget.product.id.replaceAll('gid://shopify/Product/', '');
-      debugPrint('🔧 Setting productId in ProductReviews: $cleanProductId');
+    String productId = reviewsData.productId;
+    if (productId.isEmpty) {
+      productId = widget.product.id.replaceAll('gid://shopify/Product/', '');
+      debugPrint('🔧 Setting productId in ProductReviews: $productId');
       reviewsData = review_models.ProductReviews(
-        productId: cleanProductId,
+        productId: productId,
         productTitle: reviewsData.productTitle,
         productHandle: reviewsData.productHandle,
         count: reviewsData.count,
@@ -1227,16 +1228,26 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       );
     }
     
-    // Show reviews section if we have count > 0 OR if we have review objects
-    if (reviewsData.count > 0 || reviewsData.reviews.isNotEmpty) {
+    // Always show reviews section if we have a productId (even if count is 0)
+    // This ensures WebView can load reviews from Loox servers
+    if (productId.isNotEmpty && productId != '0') {
       return ReviewsSectionWidget(
+        key: ValueKey('reviews_section_$productId'),
+        reviewsData: reviewsData,
+        productTitle: widget.product.title,
+        isCollapsible: true,
+        initiallyExpanded: false,
+      );
+    } else if (reviewsData.count > 0 || reviewsData.reviews.isNotEmpty) {
+      return ReviewsSectionWidget(
+        key: ValueKey('reviews_section_${widget.product.id}'),
         reviewsData: reviewsData,
         productTitle: widget.product.title,
         isCollapsible: true,
         initiallyExpanded: false,
       );
     } else {
-      debugPrint('⚠️ Reviews data exists but count is 0 and reviews array is empty');
+      debugPrint('⚠️ Reviews data exists but count is 0 and reviews array is empty and no productId');
       return const SizedBox.shrink();
     }
   }
