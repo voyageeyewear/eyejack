@@ -652,13 +652,24 @@ exports.getProductReviews = async (productId) => {
     
     console.log(`✅ Final result - Parsed ${reviews.length} reviews from ${numReviews} total`);
     
+    // Log detailed info about what we found
+    if (numReviews > 0 && reviews.length === 0) {
+      console.log(`⚠️ WARNING: Product has ${numReviews} reviews (rating: ${avgRating}) but no individual reviews parsed.`);
+      console.log(`⚠️ Loox stores reviews on their servers and loads them via iframe widget.`);
+      console.log(`⚠️ Metafields only contain summary data (count, rating), not individual reviews.`);
+      console.log(`⚠️ To show actual reviews, we would need to:`);
+      console.log(`   1. Use Loox's API (requires credentials)`);
+      console.log(`   2. Embed Loox widget in a WebView`);
+      console.log(`   3. Or check if there's a metafield with review HTML/JSON we're missing`);
+    }
+    
     return {
       productId: cleanProductId,
       productTitle: product.title,
       productHandle: product.handle,
       count: numReviews,
       averageRating: avgRating,
-      reviews: reviews
+      reviews: reviews // This will be empty if reviews are loaded via iframe
     };
   } catch (error) {
     console.error('Error fetching Loox reviews:', error.message);
