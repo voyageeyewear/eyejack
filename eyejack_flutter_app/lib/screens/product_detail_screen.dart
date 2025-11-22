@@ -407,6 +407,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       if (_productReviews!.count > 0 || _productReviews!.reviews.isNotEmpty) {
                         return ReviewsSectionWidget(
                           reviewsData: _productReviews!,
+                          productTitle: widget.product.title,
                           isCollapsible: true,
                           initiallyExpanded: false,
                         );

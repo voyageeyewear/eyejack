@@ -6,6 +6,10 @@ class Review {
   final String? date;
   final List<String> photos;
   final bool isVerified;
+  final String? profilePicture; // Profile picture URL
+  final String? videoUrl; // Video review URL
+  final String? productImage; // Product image shown in review
+  final String? productName; // Product name shown in review
 
   Review({
     required this.id,
@@ -15,6 +19,10 @@ class Review {
     this.date,
     this.photos = const [],
     this.isVerified = false,
+    this.profilePicture,
+    this.videoUrl,
+    this.productImage,
+    this.productName,
   });
 
   factory Review.fromJson(Map<String, dynamic> json) {
@@ -28,6 +36,10 @@ class Review {
           ? List<String>.from(json['photos'].map((p) => p.toString()))
           : [],
       isVerified: json['isVerified'] == true,
+      profilePicture: json['profilePicture']?.toString() ?? json['profile_picture']?.toString() ?? json['avatar']?.toString(),
+      videoUrl: json['videoUrl']?.toString() ?? json['video_url']?.toString() ?? json['video']?.toString(),
+      productImage: json['productImage']?.toString() ?? json['product_image']?.toString(),
+      productName: json['productName']?.toString() ?? json['product_name']?.toString(),
     );
   }
 
@@ -40,6 +52,10 @@ class Review {
       'date': date,
       'photos': photos,
       'isVerified': isVerified,
+      'profilePicture': profilePicture,
+      'videoUrl': videoUrl,
+      'productImage': productImage,
+      'productName': productName,
     };
   }
 }

@@ -6,12 +6,14 @@ class ReviewsSectionWidget extends StatelessWidget {
   final ProductReviews reviewsData;
   final bool isCollapsible;
   final bool initiallyExpanded;
+  final String? productTitle; // Product title for display
 
   const ReviewsSectionWidget({
     super.key,
     required this.reviewsData,
     this.isCollapsible = true,
     this.initiallyExpanded = false,
+    this.productTitle,
   });
 
   @override
@@ -23,20 +25,26 @@ class ReviewsSectionWidget extends StatelessWidget {
     if (isCollapsible) {
       return _CollapsibleReviewsSection(
         reviewsData: reviewsData,
+        productTitle: productTitle ?? reviewsData.productTitle,
         initiallyExpanded: initiallyExpanded,
       );
     } else {
-      return _ExpandedReviewsSection(reviewsData: reviewsData);
+      return _ExpandedReviewsSection(
+        reviewsData: reviewsData,
+        productTitle: productTitle ?? reviewsData.productTitle,
+      );
     }
   }
 }
 
 class _CollapsibleReviewsSection extends StatefulWidget {
   final ProductReviews reviewsData;
+  final String productTitle;
   final bool initiallyExpanded;
 
   const _CollapsibleReviewsSection({
     required this.reviewsData,
+    required this.productTitle,
     this.initiallyExpanded = false,
   });
 
@@ -56,15 +64,14 @@ class _CollapsibleReviewsSectionState extends State<_CollapsibleReviewsSection> 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         children: [
-          // Header
+          // Header - Rating Summary
           InkWell(
             onTap: () {
               setState(() {
@@ -75,52 +82,30 @@ class _CollapsibleReviewsSectionState extends State<_CollapsibleReviewsSection> 
               padding: const EdgeInsets.all(16),
               child: Row(
                 children: [
-                  // Star icon
-                  Icon(
-                    Icons.star,
-                    color: Colors.amber,
-                    size: 24,
+                  // Star rating display
+                  Row(
+                    children: List.generate(5, (index) {
+                      return Icon(
+                        Icons.star,
+                        color: Colors.black,
+                        size: 20,
+                      );
+                    }),
                   ),
-                  const SizedBox(width: 8),
-                  // Rating and count
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Text(
-                              widget.reviewsData.averageRating.toStringAsFixed(1),
-                              style: const TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black87,
-                              ),
-                            ),
-                            const SizedBox(width: 4),
-                            const Text(
-                              '/ 5.0',
-                              style: TextStyle(
-                                fontSize: 16,
-                                color: Colors.grey,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          '${widget.reviewsData.count} ${widget.reviewsData.count == 1 ? 'review' : 'reviews'}',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: Colors.grey.shade600,
-                          ),
-                        ),
-                      ],
+                  const SizedBox(width: 12),
+                  // Review count
+                  Text(
+                    '${widget.reviewsData.count} Reviews',
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w600,
+                      color: Colors.black87,
                     ),
                   ),
+                  const Spacer(),
                   // Expand/collapse icon
                   Icon(
-                    _isExpanded ? Icons.expand_less : Icons.expand_more,
+                    _isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
                     color: Colors.grey.shade600,
                   ),
                 ],
@@ -131,7 +116,10 @@ class _CollapsibleReviewsSectionState extends State<_CollapsibleReviewsSection> 
           if (_isExpanded)
             Divider(height: 1, color: Colors.grey.shade200),
           if (_isExpanded)
-            _ReviewsList(reviews: widget.reviewsData.reviews),
+            _ReviewsList(
+              reviews: widget.reviewsData.reviews,
+              productTitle: widget.productTitle,
+            ),
         ],
       ),
     );
@@ -140,17 +128,20 @@ class _CollapsibleReviewsSectionState extends State<_CollapsibleReviewsSection> 
 
 class _ExpandedReviewsSection extends StatelessWidget {
   final ProductReviews reviewsData;
+  final String productTitle;
 
-  const _ExpandedReviewsSection({required this.reviewsData});
+  const _ExpandedReviewsSection({
+    required this.reviewsData,
+    required this.productTitle,
+  });
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 8),
+      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.grey.shade200),
+        borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -160,34 +151,22 @@ class _ExpandedReviewsSection extends StatelessWidget {
             padding: const EdgeInsets.all(16),
             child: Row(
               children: [
-                Icon(
-                  Icons.star,
-                  color: Colors.amber,
-                  size: 24,
-                ),
-                const SizedBox(width: 8),
-                Text(
-                  reviewsData.averageRating.toStringAsFixed(1),
-                  style: const TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black87,
-                  ),
-                ),
-                const SizedBox(width: 4),
-                const Text(
-                  '/ 5.0',
-                  style: TextStyle(
-                    fontSize: 16,
-                    color: Colors.grey,
-                  ),
+                Row(
+                  children: List.generate(5, (index) {
+                    return Icon(
+                      Icons.star,
+                      color: Colors.black,
+                      size: 20,
+                    );
+                  }),
                 ),
                 const SizedBox(width: 12),
                 Text(
-                  '${reviewsData.count} ${reviewsData.count == 1 ? 'review' : 'reviews'}',
-                  style: TextStyle(
-                    fontSize: 14,
-                    color: Colors.grey.shade600,
+                  '${reviewsData.count} Reviews',
+                  style: const TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.black87,
                   ),
                 ),
               ],
@@ -195,7 +174,10 @@ class _ExpandedReviewsSection extends StatelessWidget {
           ),
           Divider(height: 1, color: Colors.grey.shade200),
           // Reviews list
-          _ReviewsList(reviews: reviewsData.reviews),
+          _ReviewsList(
+            reviews: reviewsData.reviews,
+            productTitle: productTitle,
+          ),
         ],
       ),
     );
@@ -204,8 +186,12 @@ class _ExpandedReviewsSection extends StatelessWidget {
 
 class _ReviewsList extends StatelessWidget {
   final List<Review> reviews;
+  final String productTitle;
 
-  const _ReviewsList({required this.reviews});
+  const _ReviewsList({
+    required this.reviews,
+    required this.productTitle,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -227,148 +213,297 @@ class _ReviewsList extends StatelessWidget {
       physics: const NeverScrollableScrollPhysics(),
       padding: const EdgeInsets.all(16),
       itemCount: reviews.length,
-      separatorBuilder: (context, index) => Divider(
-        height: 24,
-        color: Colors.grey.shade200,
-      ),
+      separatorBuilder: (context, index) => const SizedBox(height: 16),
       itemBuilder: (context, index) {
-        return _ReviewItem(review: reviews[index]);
+        return _ReviewCard(
+          review: reviews[index],
+          productTitle: productTitle,
+        );
       },
     );
   }
 }
 
-class _ReviewItem extends StatelessWidget {
+class _ReviewCard extends StatelessWidget {
   final Review review;
+  final String productTitle;
 
-  const _ReviewItem({required this.review});
+  const _ReviewCard({
+    required this.review,
+    required this.productTitle,
+  });
 
   @override
   Widget build(BuildContext context) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        // Header: Name, Rating, Verified badge
-        Row(
-          children: [
-            // Name
-            Expanded(
-              child: Text(
-                review.name,
-                style: const TextStyle(
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                  color: Colors.black87,
-                ),
-              ),
+    return Container(
+      padding: const EdgeInsets.all(0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.grey.shade200),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Profile picture (if available) or video/image
+          if (review.videoUrl != null || review.photos.isNotEmpty || review.profilePicture != null)
+            _ReviewMedia(
+              review: review,
             ),
-            // Rating stars
-            if (review.rating != null) ...[
-              ...List.generate(5, (index) {
-                return Icon(
-                  index < review.rating!.round()
-                      ? Icons.star
-                      : Icons.star_border,
-                  size: 16,
-                  color: Colors.amber,
-                );
-              }),
-              const SizedBox(width: 8),
-            ],
-            // Verified badge
-            if (review.isVerified)
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                decoration: BoxDecoration(
-                  color: Colors.green.shade50,
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: Colors.green.shade200),
-                ),
-                child: Row(
-                  mainAxisSize: MainAxisSize.min,
+          
+          // Review content
+          Padding(
+            padding: const EdgeInsets.all(12),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Name and Verified badge
+                Row(
                   children: [
-                    Icon(
-                      Icons.verified,
-                      size: 12,
-                      color: Colors.green.shade700,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      'Verified',
-                      style: TextStyle(
-                        fontSize: 10,
-                        color: Colors.green.shade700,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-          ],
-        ),
-        // Date
-        if (review.date != null) ...[
-          const SizedBox(height: 4),
-          Text(
-            review.date!,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.grey.shade600,
-            ),
-          ),
-        ],
-        // Review text
-        const SizedBox(height: 8),
-        Text(
-          review.text,
-          style: const TextStyle(
-            fontSize: 14,
-            color: Colors.black87,
-            height: 1.5,
-          ),
-        ),
-        // Photos
-        if (review.photos.isNotEmpty) ...[
-          const SizedBox(height: 12),
-          SizedBox(
-            height: 80,
-            child: ListView.builder(
-              scrollDirection: Axis.horizontal,
-              itemCount: review.photos.length,
-              itemBuilder: (context, photoIndex) {
-                return Container(
-                  margin: EdgeInsets.only(
-                    right: photoIndex < review.photos.length - 1 ? 8 : 0,
-                  ),
-                  width: 80,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: CachedNetworkImage(
-                      imageUrl: review.photos[photoIndex],
-                      fit: BoxFit.cover,
-                      placeholder: (context, url) => Container(
-                        color: Colors.grey.shade200,
-                        child: const Center(
-                          child: CircularProgressIndicator(strokeWidth: 2),
+                    Expanded(
+                      child: Text(
+                        review.name,
+                        style: const TextStyle(
+                          fontSize: 15,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.black87,
                         ),
                       ),
-                      errorWidget: (context, url, error) => Container(
-                        color: Colors.grey.shade200,
-                        child: const Icon(Icons.image_not_supported, size: 24),
+                    ),
+                    if (review.isVerified) ...[
+                      Icon(
+                        Icons.check_circle,
+                        size: 16,
+                        color: Colors.green.shade600,
                       ),
+                      const SizedBox(width: 4),
+                      Text(
+                        'Verified',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: Colors.green.shade600,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                
+                // Date
+                if (review.date != null) ...[
+                  const SizedBox(height: 4),
+                  Text(
+                    review.date!,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey.shade600,
                     ),
                   ),
-                );
-              },
+                ],
+                
+                // Star rating
+                if (review.rating != null) ...[
+                  const SizedBox(height: 8),
+                  Row(
+                    children: List.generate(5, (index) {
+                      return Icon(
+                        index < review.rating!.round()
+                            ? Icons.star
+                            : Icons.star_border,
+                        size: 18,
+                        color: Colors.black,
+                      );
+                    }),
+                  ),
+                ],
+                
+                // Review text
+                if (review.text.isNotEmpty) ...[
+                  const SizedBox(height: 8),
+                  Text(
+                    review.text,
+                    style: const TextStyle(
+                      fontSize: 14,
+                      color: Colors.black87,
+                      height: 1.5,
+                    ),
+                  ),
+                ],
+                
+                // User-submitted photos (if not shown at top)
+                if (review.photos.isNotEmpty && review.videoUrl == null && review.profilePicture == null) ...[
+                  const SizedBox(height: 12),
+                  SizedBox(
+                    height: 100,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: review.photos.length,
+                      itemBuilder: (context, photoIndex) {
+                        return Container(
+                          margin: EdgeInsets.only(
+                            right: photoIndex < review.photos.length - 1 ? 8 : 0,
+                          ),
+                          width: 100,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(8),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(8),
+                            child: CachedNetworkImage(
+                              imageUrl: review.photos[photoIndex],
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => Container(
+                                color: Colors.grey.shade200,
+                                child: const Center(
+                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                ),
+                              ),
+                              errorWidget: (context, url, error) => Container(
+                                color: Colors.grey.shade200,
+                                child: const Icon(Icons.image_not_supported, size: 24),
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ],
+                
+                // Product image and name at bottom
+                if (review.productImage != null || review.productName != null) ...[
+                  const SizedBox(height: 12),
+                  const Divider(height: 1),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      if (review.productImage != null) ...[
+                        Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            borderRadius: BorderRadius.circular(6),
+                            border: Border.all(color: Colors.grey.shade300),
+                          ),
+                          child: ClipRRect(
+                            borderRadius: BorderRadius.circular(6),
+                            child: CachedNetworkImage(
+                              imageUrl: review.productImage!,
+                              fit: BoxFit.cover,
+                              placeholder: (context, url) => Container(
+                                color: Colors.grey.shade200,
+                              ),
+                              errorWidget: (context, url, error) => Container(
+                                color: Colors.grey.shade200,
+                                child: const Icon(Icons.image, size: 20),
+                              ),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                      ],
+                      Expanded(
+                        child: Text(
+                          review.productName ?? productTitle,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Colors.grey.shade700,
+                            fontWeight: FontWeight.w500,
+                          ),
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                ],
+              ],
             ),
           ),
         ],
-      ],
+      ),
     );
   }
 }
 
+class _ReviewMedia extends StatelessWidget {
+  final Review review;
+
+  const _ReviewMedia({required this.review});
+
+  @override
+  Widget build(BuildContext context) {
+    // Priority: Video > Profile Picture > First Photo
+    if (review.videoUrl != null) {
+      // Video review with play button overlay
+      return Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: double.infinity,
+            height: 250,
+            color: Colors.grey.shade200,
+            child: CachedNetworkImage(
+              imageUrl: review.videoUrl!,
+              fit: BoxFit.cover,
+              placeholder: (context, url) => Container(
+                color: Colors.grey.shade300,
+              ),
+              errorWidget: (context, url, error) => Container(
+                color: Colors.grey.shade300,
+              ),
+            ),
+          ),
+          Container(
+            width: 60,
+            height: 60,
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.7),
+              shape: BoxShape.circle,
+            ),
+            child: const Icon(
+              Icons.play_arrow,
+              color: Colors.white,
+              size: 40,
+            ),
+          ),
+        ],
+      );
+    } else if (review.profilePicture != null) {
+      // Profile picture
+      return Container(
+        width: double.infinity,
+        height: 250,
+        child: CachedNetworkImage(
+          imageUrl: review.profilePicture!,
+          fit: BoxFit.cover,
+          placeholder: (context, url) => Container(
+            color: Colors.grey.shade200,
+          ),
+          errorWidget: (context, url, error) => Container(
+            color: Colors.grey.shade200,
+          ),
+        ),
+      );
+    } else if (review.photos.isNotEmpty) {
+      // First photo from user-submitted photos
+      return Container(
+        width: double.infinity,
+        height: 250,
+        child: CachedNetworkImage(
+          imageUrl: review.photos.first,
+          fit: BoxFit.cover,
+          placeholder: (context, url) => Container(
+            color: Colors.grey.shade200,
+          ),
+          errorWidget: (context, url, error) => Container(
+            color: Colors.grey.shade200,
+          ),
+        ),
+      );
+    }
+    
+    return const SizedBox.shrink();
+  }
+}
