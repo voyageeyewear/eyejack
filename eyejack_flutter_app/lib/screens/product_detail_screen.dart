@@ -19,7 +19,7 @@ import '../widgets/color_swatch_widget.dart';
 import '../widgets/reviews_section_widget.dart';
 import '../models/review_model.dart' as review_models;
 import 'collection_screen.dart';
-import 'package:webview_flutter/webview_flutter.dart' as webview;
+import 'package:webview_flutter/webview_flutter.dart';
 
 class ProductDetailScreen extends StatefulWidget {
   final Product product;
@@ -1869,7 +1869,7 @@ class _FullScreenReviewsPage extends StatefulWidget {
 }
 
 class _FullScreenReviewsPageState extends State<_FullScreenReviewsPage> {
-  late webview.WebViewController _controller;
+  late WebViewController _controller;
   bool _isLoading = true;
 
   @override
@@ -1885,10 +1885,10 @@ class _FullScreenReviewsPageState extends State<_FullScreenReviewsPage> {
     debugPrint('🌐 Loading full-screen Loox reviews for productId: ${widget.productId}');
     debugPrint('🌐 URL: $looxWidgetUrl');
 
-    _controller = webview.WebViewController()
-      ..setJavaScriptMode(webview.JavascriptMode.unrestricted)
+    _controller = WebViewController()
+      ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setNavigationDelegate(
-        webview.NavigationDelegate(
+        NavigationDelegate(
           onPageStarted: (String url) {
             setState(() {
               _isLoading = true;
@@ -1955,7 +1955,7 @@ class _FullScreenReviewsPageState extends State<_FullScreenReviewsPage> {
               _isLoading = false;
             });
           },
-          onWebResourceError: (webview.WebResourceError error) {
+          onWebResourceError: (WebResourceError error) {
             debugPrint('❌ Loox WebView error: ${error.description}');
           },
         ),
@@ -1998,7 +1998,7 @@ class _FullScreenReviewsPageState extends State<_FullScreenReviewsPage> {
       ),
       body: Stack(
         children: [
-          webview.WebViewWidget(controller: _controller),
+          WebViewWidget(controller: _controller),
           if (_isLoading)
             Container(
               color: Colors.white,
