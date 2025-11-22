@@ -68,17 +68,21 @@ function parseLooxReviews(html) {
       console.log('⚠️ JSON parsing failed, trying HTML parsing...');
     }
     
-    // Strategy 2: Extract review blocks with flexible class names
-    // Loox uses various class names like "loox-review", "review-item", etc.
+    // Strategy 2: Extract review blocks with Loox-specific class names
+    // Use cleanHtml (without CSS/scripts) for parsing
     const reviewPatterns = [
-      /<div[^>]*class="[^"]*review[^"]*"[^>]*>(.*?)<\/div>/gis,
-      /<div[^>]*class="[^"]*loox-review[^"]*"[^>]*>(.*?)<\/div>/gis,
-      /<article[^>]*class="[^"]*review[^"]*"[^>]*>(.*?)<\/article>/gis,
+      /<div[^>]*class="[^"]*loox-review-item[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+      /<div[^>]*class="[^"]*review-item[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+      /<article[^>]*class="[^"]*loox-review[^"]*"[^>]*>([\s\S]*?)<\/article>/gi,
+      /<div[^>]*class="[^"]*review-card[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
+      /<div[^>]*data-loox-review[^>]*>([\s\S]*?)<\/div>/gi,
+      // Fallback: any div with review in class
+      /<div[^>]*class="[^"]*review[^"]*"[^>]*>([\s\S]*?)<\/div>/gi,
     ];
     
     let reviewMatches = [];
     for (const pattern of reviewPatterns) {
-      const matches = Array.from(html.matchAll(pattern));
+      const matches = Array.from(cleanHtml.matchAll(pattern));
       if (matches.length > 0) {
         reviewMatches = matches;
         console.log(`✅ Found ${matches.length} reviews using pattern`);
@@ -86,14 +90,12 @@ function parseLooxReviews(html) {
       }
     }
     
-    // Strategy 3: If no matches, try to find any structured data
+    // Strategy 3: If no matches, the widget might be using a different structure
+    // Check if there's an iframe or if reviews are loaded via JavaScript
     if (reviewMatches.length === 0) {
-      // Look for any divs that might contain review data
-      const allDivs = html.match(/<div[^>]*>(.*?)<\/div>/gis);
-      if (allDivs && allDivs.length > 0) {
-        console.log(`⚠️ Found ${allDivs.length} divs, attempting to parse as reviews`);
-        reviewMatches = allDivs.map((m, i) => [m, m]);
-      }
+      console.log(`⚠️ No review blocks found. Widget might use iframe or dynamic loading.`);
+      // Don't try to parse all divs - that would be too noisy
+      // Return empty and let it fall back to metafields
     }
     
     reviewMatches.forEach((match, index) => {
@@ -427,14 +429,29 @@ async function fetchLooxReviewsFromWidget(productId) {
       
       // If no JSON found, parse HTML
       console.log(`📄 No JSON found, parsing HTML structure...`);
-      const reviews = parseLooxReviews(response.data);
+      console.log(`📄 HTML preview (first 1000 chars): ${response.data.substring(0, 1000)}`);
       
-      if (reviews && reviews.length > 0) {
-        return {
-          reviews: reviews,
-          count: reviews.length,
-          averageRating: reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length || 0
-        };
+      // Check if response is actually HTML or if it's an error page
+      if (response.data.includes('<!DOCTYPE') || response.data.includes('<html')) {
+        console.log(`📄 This is an HTML page, extracting review data...`);
+        const reviews = parseLooxReviews(response.data);
+        
+        if (reviews && reviews.length > 0) {
+          console.log(`✅ Parsed ${reviews.length} reviews from HTML`);
+          return {
+            reviews: reviews,
+            count: reviews.length,
+            averageRating: reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length || 0
+          };
+        } else {
+          console.log(`⚠️ No reviews parsed from HTML. HTML might be an iframe wrapper.`);
+          // The widget might return an iframe wrapper - we need to extract the actual review data differently
+          // Try to find review data in script tags or data attributes
+          return null; // Fall back to metafields
+        }
+      } else {
+        console.log(`⚠️ Response doesn't look like HTML, might be an error or redirect`);
+        return null; // Fall back to metafields
       }
     }
     
