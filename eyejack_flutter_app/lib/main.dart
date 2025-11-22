@@ -4,6 +4,7 @@ import 'package:gokwik/config/types.dart';
 import 'package:gokwik/go_kwik_client.dart';
 import 'providers/shop_provider.dart';
 import 'providers/collection_settings_provider.dart';
+import 'providers/theme_provider.dart';
 import 'screens/splash_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/product_detail_screen.dart';
@@ -47,58 +48,71 @@ class MyApp extends StatelessWidget {
       providers: [
         ChangeNotifierProvider(create: (_) => ShopProvider()),
         ChangeNotifierProvider(create: (_) => CollectionSettingsProvider()),
+        ChangeNotifierProvider(create: (_) => ThemeProvider()..loadThemeSettings()),
       ],
-      child: MaterialApp(
-        title: 'Eyejack Eyewear',
-        debugShowCheckedModeBanner: false,
-        theme: ThemeData(
-          colorScheme: ColorScheme.fromSeed(
-            seedColor: Colors.black,
-            primary: Colors.black,
-          ),
-          useMaterial3: true,
-          appBarTheme: const AppBarTheme(
-            backgroundColor: Colors.white,
-            foregroundColor: Colors.black,
-            elevation: 1,
-          ),
-          elevatedButtonTheme: ElevatedButtonThemeData(
-            style: ElevatedButton.styleFrom(
-              backgroundColor: Colors.black,
-              foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 24,
-                vertical: 12,
+      child: Consumer<ThemeProvider>(
+        builder: (context, themeProvider, child) {
+          return MaterialApp(
+            title: 'Eyejack Eyewear',
+            debugShowCheckedModeBanner: false,
+            theme: ThemeData(
+              colorScheme: ColorScheme.fromSeed(
+                seedColor: themeProvider.primaryColor,
+                primary: themeProvider.primaryColor,
+                secondary: themeProvider.secondaryColor,
+                background: themeProvider.backgroundColor,
+                surface: themeProvider.backgroundColor,
+                onPrimary: themeProvider.textColor,
+                onBackground: themeProvider.textColor,
               ),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+              useMaterial3: true,
+              appBarTheme: AppBarTheme(
+                backgroundColor: themeProvider.blackFridayActive 
+                    ? ThemeProvider.blackFridayBackground 
+                    : Colors.white,
+                foregroundColor: themeProvider.textColor,
+                elevation: themeProvider.blackFridayActive ? 0 : 1,
               ),
+              elevatedButtonTheme: ElevatedButtonThemeData(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: themeProvider.primaryColor,
+                  foregroundColor: themeProvider.textColor,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 24,
+                    vertical: 12,
+                  ),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+              scaffoldBackgroundColor: themeProvider.backgroundColor,
             ),
-          ),
-        ),
-        home: const SplashScreen(nextScreen: HomeScreen()),
-        onGenerateRoute: (settings) {
-          switch (settings.name) {
-            case '/product':
-              final product = settings.arguments as Product;
-              return MaterialPageRoute(
-                builder: (context) => ProductDetailScreen(product: product),
-              );
-            
-            case '/collection':
-              final collection = settings.arguments as Collection;
-              return MaterialPageRoute(
-                builder: (context) => CollectionScreen(collection: collection),
-              );
-            
-            case '/search':
-              return MaterialPageRoute(
-                builder: (context) => const SearchScreen(),
-              );
-            
-            default:
-              return null;
-          }
+            home: const SplashScreen(nextScreen: HomeScreen()),
+            onGenerateRoute: (settings) {
+              switch (settings.name) {
+                case '/product':
+                  final product = settings.arguments as Product;
+                  return MaterialPageRoute(
+                    builder: (context) => ProductDetailScreen(product: product),
+                  );
+                
+                case '/collection':
+                  final collection = settings.arguments as Collection;
+                  return MaterialPageRoute(
+                    builder: (context) => CollectionScreen(collection: collection),
+                  );
+                
+                case '/search':
+                  return MaterialPageRoute(
+                    builder: (context) => const SearchScreen(),
+                  );
+                
+                default:
+                  return null;
+              }
+            },
+          );
         },
       ),
     );

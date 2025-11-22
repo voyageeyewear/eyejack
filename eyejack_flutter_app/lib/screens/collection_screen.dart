@@ -13,6 +13,8 @@ import '../screens/product_detail_screen.dart';
 import '../screens/kp_checkout_screen.dart';
 import '../widgets/collection_banner_widget.dart';
 import '../widgets/cart_drawer.dart';
+import '../widgets/pulsing_sale_badge.dart';
+import '../providers/theme_provider.dart';
 import '../models/review_model.dart' as review_models;
 
 class CollectionScreen extends StatefulWidget {
@@ -1443,23 +1445,37 @@ class _CollectionScreenState extends State<CollectionScreen> {
                   Positioned(
                     top: 8,
                     right: 8,
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 6,
-                        vertical: 3,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFE74C3C),
-                        borderRadius: BorderRadius.circular(3),
-                      ),
-                      child: Text(
-                        '$discountPercent% off',
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 10,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
+                    child: Consumer<ThemeProvider>(
+                      builder: (context, themeProvider, child) {
+                        if (themeProvider.blackFridayActive) {
+                          return PulsingSaleBadge(
+                            text: '$discountPercent% OFF',
+                            fontSize: 10,
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 6,
+                              vertical: 3,
+                            ),
+                          );
+                        }
+                        return Container(
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 6,
+                            vertical: 3,
+                          ),
+                          decoration: BoxDecoration(
+                            color: const Color(0xFFE74C3C),
+                            borderRadius: BorderRadius.circular(3),
+                          ),
+                          child: Text(
+                            '$discountPercent% off',
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        );
+                      },
                     ),
                   ),
               ],

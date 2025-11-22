@@ -366,14 +366,31 @@ exports.getProductReviews = async (req, res, next) => {
       });
     }
     
+    console.log(`🔍 Controller: Fetching reviews for product: ${productId}`);
     const reviewsData = await looxService.getProductReviews(productId);
+    console.log(`✅ Controller: Reviews fetched - Count: ${reviewsData.count}, Reviews Array: ${reviewsData.reviews?.length || 0}`);
+    
     res.json({
       success: true,
       data: reviewsData
     });
   } catch (error) {
-    console.error('Error fetching product reviews:', error);
-    next(error);
+    console.error('❌ Controller Error fetching product reviews:', error);
+    console.error('❌ Error stack:', error.stack);
+    
+    // Return empty reviews structure instead of error
+    const cleanProductId = req.params.productId?.replace('gid://shopify/Product/', '') || '';
+    res.json({
+      success: true,
+      data: {
+        productId: cleanProductId,
+        productTitle: '',
+        productHandle: '',
+        count: 0,
+        averageRating: 0.0,
+        reviews: []
+      }
+    });
   }
 };
 

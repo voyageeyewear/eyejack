@@ -68,17 +68,31 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     });
     
     try {
+      debugPrint('🔄 Starting to load reviews for product: ${widget.product.id}');
       final reviews = await ApiService().getProductReviews(widget.product.id);
+      debugPrint('📦 Reviews loaded - Count: ${reviews.count}, Reviews Array Length: ${reviews.reviews.length}, Avg Rating: ${reviews.averageRating}');
+      debugPrint('📦 Reviews data: ${reviews.reviews.map((r) => r.name).join(", ")}');
+      
       if (mounted) {
         setState(() {
           _productReviews = reviews;
           _reviewsLoading = false;
         });
+        debugPrint('✅ Reviews state updated successfully');
       }
-    } catch (e) {
-      debugPrint('Error loading reviews: $e');
+    } catch (e, stackTrace) {
+      debugPrint('❌ Error loading reviews: $e');
+      debugPrint('❌ Stack trace: $stackTrace');
       if (mounted) {
         setState(() {
+          _productReviews = review_models.ProductReviews(
+            productId: widget.product.id.replaceAll('gid://shopify/Product/', ''),
+            productTitle: widget.product.title,
+            productHandle: '',
+            count: 0,
+            averageRating: 0.0,
+            reviews: [],
+          );
           _reviewsLoading = false;
         });
       }
@@ -385,11 +399,22 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     padding: EdgeInsets.all(16),
                     child: Center(child: CircularProgressIndicator()),
                   )
-                else if (_productReviews != null && (_productReviews!.count > 0 || _productReviews!.reviews.isNotEmpty))
-                  ReviewsSectionWidget(
-                    reviewsData: _productReviews!,
-                    isCollapsible: true,
-                    initiallyExpanded: false,
+                else if (_productReviews != null)
+                  Builder(
+                    builder: (context) {
+                      debugPrint('🎨 Building ReviewsSectionWidget - Count: ${_productReviews!.count}, Reviews: ${_productReviews!.reviews.length}');
+                      // Show reviews section if we have count > 0 OR if we have review objects
+                      if (_productReviews!.count > 0 || _productReviews!.reviews.isNotEmpty) {
+                        return ReviewsSectionWidget(
+                          reviewsData: _productReviews!,
+                          isCollapsible: true,
+                          initiallyExpanded: false,
+                        );
+                      } else {
+                        debugPrint('⚠️ Reviews data exists but count is 0 and reviews array is empty');
+                        return const SizedBox.shrink();
+                      }
+                    },
                   ),
 
                 const SizedBox(height: 8),

@@ -29,67 +29,177 @@ const storefrontClient = axios.create({
  * @returns {Array} Array of parsed review objects
  */
 function parseLooxReviews(html) {
-  if (!html || typeof html !== 'string') {
+  if (!html || typeof html !== 'string' || html.trim().length === 0) {
+    console.log('⚠️ No HTML content to parse');
     return [];
   }
+
+  console.log(`📄 Parsing Loox reviews HTML (length: ${html.length})`);
+  console.log(`📄 HTML preview: ${html.substring(0, 500)}...`);
 
   const reviews = [];
   
   try {
-    // Extract all review divs
-    const reviewRegex = /<div class="review">(.*?)<\/div>\s*(?=<div class="review">|<\/div>)/gs;
-    const reviewMatches = Array.from(html.matchAll(reviewRegex));
+    // Loox stores reviews in a structured format - try multiple parsing strategies
+    
+    // Strategy 1: Look for JSON-like structure (common in Loox)
+    try {
+      const jsonMatch = html.match(/\{.*"reviews".*\}/s);
+      if (jsonMatch) {
+        const jsonData = JSON.parse(jsonMatch[0]);
+        if (jsonData.reviews && Array.isArray(jsonData.reviews)) {
+          console.log(`✅ Found JSON structure with ${jsonData.reviews.length} reviews`);
+          return jsonData.reviews.map((review, index) => ({
+            id: review.id || `review-${index}`,
+            name: review.name || review.customer_name || 'Anonymous',
+            text: review.text || review.review_text || review.comment || '',
+            rating: review.rating || review.stars || null,
+            date: review.date || review.created_at || null,
+            photos: review.photos || review.images || [],
+            isVerified: review.verified || review.is_verified || false,
+          }));
+        }
+      }
+    } catch (e) {
+      console.log('⚠️ JSON parsing failed, trying HTML parsing...');
+    }
+    
+    // Strategy 2: Extract review blocks with flexible class names
+    // Loox uses various class names like "loox-review", "review-item", etc.
+    const reviewPatterns = [
+      /<div[^>]*class="[^"]*review[^"]*"[^>]*>(.*?)<\/div>/gis,
+      /<div[^>]*class="[^"]*loox-review[^"]*"[^>]*>(.*?)<\/div>/gis,
+      /<article[^>]*class="[^"]*review[^"]*"[^>]*>(.*?)<\/article>/gis,
+    ];
+    
+    let reviewMatches = [];
+    for (const pattern of reviewPatterns) {
+      const matches = Array.from(html.matchAll(pattern));
+      if (matches.length > 0) {
+        reviewMatches = matches;
+        console.log(`✅ Found ${matches.length} reviews using pattern`);
+        break;
+      }
+    }
+    
+    // Strategy 3: If no matches, try to find any structured data
+    if (reviewMatches.length === 0) {
+      // Look for any divs that might contain review data
+      const allDivs = html.match(/<div[^>]*>(.*?)<\/div>/gis);
+      if (allDivs && allDivs.length > 0) {
+        console.log(`⚠️ Found ${allDivs.length} divs, attempting to parse as reviews`);
+        reviewMatches = allDivs.map((m, i) => [m, m]);
+      }
+    }
     
     reviewMatches.forEach((match, index) => {
-      const reviewHtml = match[1];
+      const reviewHtml = match[1] || match[0];
       
-      // Extract name
-      const nameMatch = reviewHtml.match(/<div class="name">(.*?)<\/div>/);
-      const name = nameMatch ? nameMatch[1].trim() : 'Anonymous';
+      // Extract name - try multiple patterns
+      const namePatterns = [
+        /<div[^>]*class="[^"]*name[^"]*"[^>]*>(.*?)<\/div>/i,
+        /<span[^>]*class="[^"]*customer-name[^"]*"[^>]*>(.*?)<\/span>/i,
+        /<h[1-6][^>]*>(.*?)<\/h[1-6]>/i,
+        /"name"\s*:\s*"([^"]+)"/i,
+        /"customer_name"\s*:\s*"([^"]+)"/i,
+      ];
       
-      // Extract review text
-      const textMatch = reviewHtml.match(/<div class="review_text">(.*?)<\/div>/);
-      const text = textMatch ? textMatch[1].trim() : '';
-      
-      // Extract rating (if available)
-      const ratingMatch = reviewHtml.match(/data-rating="(\d+)"/) || 
-                          reviewHtml.match(/rating[^>]*>(\d+)/) ||
-                          reviewHtml.match(/<div class="rating">(.*?)<\/div>/);
-      let rating = null;
-      if (ratingMatch) {
-        const ratingValue = parseInt(ratingMatch[1]) || 
-                           (ratingMatch[1].includes('★') ? ratingMatch[1].split('★').length - 1 : null);
-        if (ratingValue && ratingValue >= 1 && ratingValue <= 5) {
-          rating = ratingValue;
+      let name = 'Anonymous';
+      for (const pattern of namePatterns) {
+        const nameMatch = reviewHtml.match(pattern);
+        if (nameMatch && nameMatch[1]) {
+          name = nameMatch[1].trim().replace(/<[^>]+>/g, '');
+          if (name) break;
         }
       }
       
-      // Extract date (if available)
-      const dateMatch = reviewHtml.match(/<div class="date">(.*?)<\/div>/);
-      const date = dateMatch ? dateMatch[1].trim() : null;
+      // Extract review text - try multiple patterns
+      const textPatterns = [
+        /<div[^>]*class="[^"]*review[^"]*text[^"]*"[^>]*>(.*?)<\/div>/i,
+        /<div[^>]*class="[^"]*comment[^"]*"[^>]*>(.*?)<\/div>/i,
+        /<p[^>]*>(.*?)<\/p>/i,
+        /"text"\s*:\s*"([^"]+)"/i,
+        /"comment"\s*:\s*"([^"]+)"/i,
+        /"review_text"\s*:\s*"([^"]+)"/i,
+      ];
       
-      // Extract photos (if available)
-      const photoMatches = reviewHtml.matchAll(/<img[^>]*src="([^"]+)"[^>]*>/g);
-      const photos = Array.from(photoMatches).map(m => m[1]);
+      let text = '';
+      for (const pattern of textPatterns) {
+        const textMatch = reviewHtml.match(pattern);
+        if (textMatch && textMatch[1]) {
+          text = textMatch[1].trim().replace(/<[^>]+>/g, '').replace(/\\n/g, ' ');
+          if (text) break;
+        }
+      }
       
-      // Extract verified purchase badge (if available)
-      const verifiedMatch = reviewHtml.match(/verified|verified.*purchase/i);
-      const isVerified = !!verifiedMatch;
+      // Extract rating
+      const ratingPatterns = [
+        /data-rating="(\d+)"/i,
+        /rating[^>]*>(\d+)/i,
+        /"rating"\s*:\s*(\d+)/i,
+        /"stars"\s*:\s*(\d+)/i,
+        /★{(\d+)}/,
+        /(\d+)\s*stars?/i,
+      ];
       
-      if (name && text) {
+      let rating = null;
+      for (const pattern of ratingPatterns) {
+        const ratingMatch = reviewHtml.match(pattern);
+        if (ratingMatch) {
+          rating = parseInt(ratingMatch[1]);
+          if (rating >= 1 && rating <= 5) break;
+        }
+      }
+      
+      // Extract date
+      const datePatterns = [
+        /<div[^>]*class="[^"]*date[^"]*"[^>]*>(.*?)<\/div>/i,
+        /"date"\s*:\s*"([^"]+)"/i,
+        /"created_at"\s*:\s*"([^"]+)"/i,
+        /(\d{4}-\d{2}-\d{2})/,
+      ];
+      
+      let date = null;
+      for (const pattern of datePatterns) {
+        const dateMatch = reviewHtml.match(pattern);
+        if (dateMatch && dateMatch[1]) {
+          date = dateMatch[1].trim().replace(/<[^>]+>/g, '');
+          if (date) break;
+        }
+      }
+      
+      // Extract photos
+      const photoMatches = Array.from(reviewHtml.matchAll(/<img[^>]*src="([^"]+)"[^>]*>/gi));
+      const photos = photoMatches.map(m => m[1]).filter(url => url && !url.includes('placeholder'));
+      
+      // Extract verified badge
+      const isVerified = /verified|verified.*purchase/i.test(reviewHtml);
+      
+      // Only add review if we have at least name or text
+      if (name || text) {
         reviews.push({
           id: `review-${index}`,
-          name,
-          text,
+          name: name || 'Anonymous',
+          text: text || 'No review text available',
           rating: rating || null,
           date: date || null,
-          photos: photos.length > 0 ? photos : [],
+          photos: photos || [],
           isVerified: isVerified
         });
+        console.log(`✅ Parsed review ${index + 1}: ${name}, text length: ${text.length}, rating: ${rating}`);
       }
     });
+    
+    console.log(`✅ Successfully parsed ${reviews.length} reviews from HTML`);
+  
+  // If no reviews were parsed but we have HTML, log it for debugging
+  if (reviews.length === 0 && html && html.length > 0) {
+    console.log(`⚠️ WARNING: No reviews parsed from HTML. HTML length: ${html.length}`);
+    console.log(`⚠️ HTML structure sample: ${html.substring(0, 1000)}`);
+  }
   } catch (error) {
-    console.error('Error parsing Loox reviews HTML:', error);
+    console.error('❌ Error parsing Loox reviews HTML:', error);
+    console.error('❌ Stack trace:', error.stack);
   }
   
   return reviews;
@@ -142,19 +252,90 @@ exports.getProductReviews = async (productId) => {
     const product = response.data.data.product;
     const metafields = product.metafields.edges.map(edge => edge.node);
     
-    // Extract Loox metafields
+    console.log(`📦 Found ${metafields.length} Loox metafields for product ${product.title}`);
+    console.log(`📦 Metafield keys: ${metafields.map(mf => mf.key).join(', ')}`);
+    
+    // Extract Loox metafields - try multiple possible keys
     const numReviewsField = metafields.find(mf => mf.key === 'num_reviews');
     const avgRatingField = metafields.find(mf => mf.key === 'avg_rating');
-    const reviewsField = metafields.find(mf => mf.key === 'reviews');
+    
+    // Try multiple possible keys for reviews data
+    const reviewsField = metafields.find(mf => 
+      mf.key === 'reviews' || 
+      mf.key === 'reviews_json' || 
+      mf.key === 'review_data' ||
+      mf.key === 'all_reviews' ||
+      mf.key === 'reviews_data' ||
+      mf.key === 'loox_reviews'
+    );
     
     const numReviews = numReviewsField ? parseInt(numReviewsField.value) || 0 : 0;
     const avgRating = avgRatingField ? parseFloat(avgRatingField.value) || 0 : 0;
-    const reviewsHtml = reviewsField ? reviewsField.value : '';
     
-    // Parse reviews from HTML
-    const reviews = parseLooxReviews(reviewsHtml);
+    console.log(`📊 Review stats - Count: ${numReviews}, Rating: ${avgRating}`);
     
-    console.log(`✅ Found ${reviews.length} parsed reviews (${numReviews} total)`);
+    let reviewsHtml = '';
+    let reviewsData = null;
+    
+    if (reviewsField) {
+      console.log(`✅ Found reviews field: ${reviewsField.key} (type: ${reviewsField.type})`);
+      console.log(`📄 Reviews field value length: ${reviewsField.value?.length || 0}`);
+      console.log(`📄 Reviews field preview: ${reviewsField.value?.substring(0, 200) || 'empty'}...`);
+      
+      // Check if it's JSON
+      if (reviewsField.type === 'json' || reviewsField.value?.trim().startsWith('{') || reviewsField.value?.trim().startsWith('[')) {
+        try {
+          reviewsData = JSON.parse(reviewsField.value);
+          console.log(`✅ Parsed reviews as JSON - Type: ${Array.isArray(reviewsData) ? 'Array' : typeof reviewsData}`);
+          if (Array.isArray(reviewsData)) {
+            console.log(`✅ Found ${reviewsData.length} reviews in JSON array`);
+          } else if (reviewsData.reviews && Array.isArray(reviewsData.reviews)) {
+            console.log(`✅ Found ${reviewsData.reviews.length} reviews in JSON object`);
+          }
+        } catch (e) {
+          console.log(`⚠️ Failed to parse as JSON, treating as HTML: ${e.message}`);
+          reviewsHtml = reviewsField.value;
+        }
+      } else {
+        reviewsHtml = reviewsField.value;
+      }
+    } else {
+      console.log(`⚠️ No reviews metafield found. Available keys: ${metafields.map(mf => mf.key).join(', ')}`);
+    }
+    
+    let reviews = [];
+    
+    // If we have JSON data, use it directly
+    if (reviewsData) {
+      if (Array.isArray(reviewsData)) {
+        reviews = reviewsData.map((review, index) => ({
+          id: review.id || review.review_id || `review-${index}`,
+          name: review.name || review.customer_name || review.customer?.name || 'Anonymous',
+          text: review.text || review.review_text || review.comment || review.message || '',
+          rating: review.rating || review.stars || review.score || null,
+          date: review.date || review.created_at || review.review_date || null,
+          photos: review.photos || review.images || review.photo_urls || [],
+          isVerified: review.verified || review.is_verified || review.verified_purchase || false,
+        }));
+      } else if (reviewsData.reviews && Array.isArray(reviewsData.reviews)) {
+        reviews = reviewsData.reviews.map((review, index) => ({
+          id: review.id || review.review_id || `review-${index}`,
+          name: review.name || review.customer_name || review.customer?.name || 'Anonymous',
+          text: review.text || review.review_text || review.comment || review.message || '',
+          rating: review.rating || review.stars || review.score || null,
+          date: review.date || review.created_at || review.review_date || null,
+          photos: review.photos || review.images || review.photo_urls || [],
+          isVerified: review.verified || review.is_verified || review.verified_purchase || false,
+        }));
+      }
+    }
+    
+    // If no reviews from JSON, try parsing HTML
+    if (reviews.length === 0 && reviewsHtml) {
+      reviews = parseLooxReviews(reviewsHtml);
+    }
+    
+    console.log(`✅ Final result - Parsed ${reviews.length} reviews from ${numReviews} total`);
     
     return {
       productId: cleanProductId,

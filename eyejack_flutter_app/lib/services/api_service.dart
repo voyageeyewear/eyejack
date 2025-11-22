@@ -472,10 +472,19 @@ class ApiService {
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        debugPrint('✅ Loox reviews loaded: ${data['data']['count']} reviews');
-        return review_models.ProductReviews.fromJson(data['data']);
+        debugPrint('✅ API Response received - Status: ${data['success']}');
+        debugPrint('📦 Raw data keys: ${data['data']?.keys.toList()}');
+        debugPrint('📦 Reviews count: ${data['data']?['count']}, Reviews array length: ${(data['data']?['reviews'] as List?)?.length ?? 0}');
+        debugPrint('📦 Full response: ${json.encode(data)}');
+        
+        if (data['success'] == true && data['data'] != null) {
+          return review_models.ProductReviews.fromJson(data['data']);
+        } else {
+          throw Exception('Invalid response format: ${data}');
+        }
       } else {
         debugPrint('⚠️ Failed to load reviews: ${response.statusCode}');
+        debugPrint('⚠️ Response body: ${response.body}');
         // Return empty reviews instead of throwing
         return review_models.ProductReviews(
           productId: cleanProductId,

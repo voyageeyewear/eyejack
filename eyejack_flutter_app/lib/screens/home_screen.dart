@@ -6,6 +6,8 @@ import '../widgets/cart_drawer.dart';
 import '../widgets/footer_widget.dart';
 import '../services/api_service.dart';
 import '../screens/kp_checkout_screen.dart';
+import '../providers/theme_provider.dart';
+import '../widgets/black_friday_countdown_widget.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -250,8 +252,13 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   Widget _buildCustomAppBar(BuildContext context) {
+    final themeProvider = Provider.of<ThemeProvider>(context);
+    final backgroundColor = themeProvider.blackFridayActive 
+        ? ThemeProvider.blackFridayBackground 
+        : Colors.black;
+    
     return Container(
-      color: Colors.black,
+      color: backgroundColor,
       height: 56,
       child: Row(
         children: [
@@ -281,7 +288,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                   // Version display
                   const Text(
-                    'v12.24.0 (156)',
+                    'v12.26.0 (158)',
                     style: TextStyle(
                       color: Colors.white70,
                       fontSize: 9,
@@ -383,12 +390,24 @@ class _HomeScreenState extends State<HomeScreen> {
                       ),
                     )),
                 
-                // 2. Custom header (AppBar)
+                // 2. Black Friday Countdown (if active)
+                if (Provider.of<ThemeProvider>(context).blackFridayActive)
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.all(16.0),
+                      child: BlackFridayCountdownWidget(
+                        endDate: Provider.of<ThemeProvider>(context).countdownEndDate,
+                        showLabel: true,
+                      ),
+                    ),
+                  ),
+                
+                // 3. Custom header (AppBar)
                 SliverToBoxAdapter(
                   child: _buildCustomAppBar(context),
                 ),
                 
-                // 3. All other sections
+                // 4. All other sections
                 SliverList(
                   delegate: SliverChildBuilderDelegate(
                     (context, index) {
