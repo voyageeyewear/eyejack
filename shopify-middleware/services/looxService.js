@@ -176,16 +176,29 @@ function parseLooxReviews(html) {
           .replace(/\s+/g, ' ')
           .trim();
         
-        // Remove name if we found it, to get just the review text
-        if (name && textContent.toLowerCase().startsWith(name.toLowerCase())) {
-          text = textContent.substring(name.length).trim().replace(/^[:\-\s]+/, '').trim();
-        } else {
-          text = textContent;
-        }
+        // Don't remove name from text - sometimes the text IS just a name like "Sandeep .."
+        // This is valid review text (customer just wrote their name)
+        text = textContent;
         
-        // Only use if substantial (more than just "Anonymous" or empty)
-        if (text.length < 10 || text === 'Anonymous' || text.includes('No review')) {
+        // Filter out obvious non-review content
+        if (text.length < 2 || 
+            text === 'Anonymous' || 
+            text.toLowerCase().includes('no review') ||
+            text.match(/^review\s+\d+$/i)) {
           text = '';
+        }
+      }
+      
+      // Fix name/text confusion:
+      // If text is very short (like "Sandeep .." or "Darshan D."), it might actually be the name
+      // Only extract as name if we DON'T have a name yet and text is clearly a name pattern
+      if (!name && text) {
+        const namePattern = /^([A-Z][a-z]+(?:\s+[A-Z]\.?)?)\s*\.{0,2}\s*$/;
+        const nameMatch = text.match(namePattern);
+        if (nameMatch && nameMatch[1] && nameMatch[1].length < 30 && nameMatch[1].length > 2) {
+          // Text is just a name, extract it
+          name = nameMatch[1].trim();
+          text = ''; // Clear text since it was just the name
         }
       }
       
@@ -320,17 +333,9 @@ function parseLooxReviews(html) {
       // Extract verified badge
       const isVerified = /verified|verified.*purchase/i.test(reviewHtml);
       
-      // Improve name extraction - try to get actual customer name from text
-      // Sometimes the name is in the text like "Sandeep .." or "Darshan D."
-      if (!name || name === 'Anonymous' || name.length < 2) {
-        // Try to extract name from text content (first few words before review text)
-        const textContent = reviewHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
-        // Look for patterns like "Name S." or "First Last" at the start
-        const nameFromText = textContent.match(/^([A-Z][a-z]+(?:\s+[A-Z][a-z]*\.?)?)/);
-        if (nameFromText && nameFromText[1] && nameFromText[1].length > 2 && nameFromText[1].length < 30) {
-          name = nameFromText[1].trim();
-        }
-      }
+      // IMPORTANT: Don't extract name from text - this causes confusion
+      // Names should come from proper name fields, not from review text
+      // The text might start with a name like "Sandeep .." but that's part of the review text
       
       // Only add review if we have actual content (not just defaults)
       // Check if name is not 'Anonymous' and text is not empty/default
@@ -373,6 +378,78 @@ function parseLooxReviews(html) {
 }
 
 /**
+ * Fetch Loox reviews directly from Loox widget endpoint
+ * Loox loads reviews in an iframe, so we need to fetch the widget HTML and parse it
+ * @param {string} productId - Shopify product ID (without gid:// prefix)
+ * @returns {Promise<Object>} Reviews data with count, rating, and reviews array
+ */
+async function fetchLooxReviewsFromWidget(productId) {
+  try {
+    const LOOX_MERCHANT_ID = 'PmGdDSBYpW'; // Your Loox merchant/widget ID from website
+    const reviewsUrl = `https://loox.io/widget/${LOOX_MERCHANT_ID}/reviews/${productId}?limit=50`;
+    
+    console.log(`🌐 Fetching reviews from Loox widget: ${reviewsUrl}`);
+    
+    const response = await axios.get(reviewsUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        'Accept-Language': 'en-US,en;q=0.9',
+        'Referer': 'https://eyejack.in/',
+      },
+      timeout: 15000,
+    });
+    
+    if (response.data) {
+      console.log(`✅ Got response from Loox widget (length: ${response.data.length})`);
+      
+      // Try to extract JSON from script tags first
+      const jsonPatterns = [
+        /window\.looxReviews\s*=\s*({[\s\S]*?});/,
+        /window\.looxData\s*=\s*({[\s\S]*?});/,
+        /var\s+looxReviews\s*=\s*({[\s\S]*?});/,
+        /<script[^>]*type="application\/json"[^>]*>([\s\S]*?)<\/script>/,
+        /<script[^>]*id="loox-data"[^>]*>([\s\S]*?)<\/script>/,
+      ];
+      
+      for (const pattern of jsonPatterns) {
+        const match = response.data.match(pattern);
+        if (match && match[1]) {
+          try {
+            const jsonData = JSON.parse(match[1]);
+            console.log(`✅ Found JSON data in script tag`);
+            return jsonData;
+          } catch (e) {
+            console.log(`⚠️ Failed to parse JSON: ${e.message}`);
+          }
+        }
+      }
+      
+      // If no JSON found, parse HTML
+      console.log(`📄 No JSON found, parsing HTML structure...`);
+      const reviews = parseLooxReviews(response.data);
+      
+      if (reviews && reviews.length > 0) {
+        return {
+          reviews: reviews,
+          count: reviews.length,
+          averageRating: reviews.reduce((sum, r) => sum + (r.rating || 0), 0) / reviews.length || 0
+        };
+      }
+    }
+    
+    return null;
+  } catch (error) {
+    console.error(`❌ Error fetching from Loox widget: ${error.message}`);
+    if (error.response) {
+      console.error(`   Status: ${error.response.status}`);
+      console.error(`   Headers: ${JSON.stringify(error.response.headers)}`);
+    }
+    return null;
+  }
+}
+
+/**
  * Fetch Loox reviews for a product
  * @param {string} productId - Shopify product ID (without gid:// prefix)
  * @returns {Promise<Object>} Reviews data with count, rating, and reviews array
@@ -385,6 +462,38 @@ exports.getProductReviews = async (productId) => {
     let cleanProductId = productId;
     if (cleanProductId.includes('gid://shopify/Product/')) {
       cleanProductId = cleanProductId.replace('gid://shopify/Product/', '');
+    }
+    
+    // First, try to fetch directly from Loox widget endpoint
+    // Loox reviews are NOT in Shopify metafields - they're loaded from Loox servers
+    const looxWidgetData = await fetchLooxReviewsFromWidget(cleanProductId);
+    if (looxWidgetData && (looxWidgetData.reviews || looxWidgetData.data)) {
+      console.log(`✅ Got reviews from Loox widget directly`);
+      const reviews = looxWidgetData.reviews || looxWidgetData.data?.reviews || [];
+      
+      // Transform reviews to our format if they're from widget
+      const transformedReviews = Array.isArray(reviews) ? reviews.map((review, index) => ({
+        id: review.id || `review-${index}`,
+        name: review.name || review.customer_name || review.customer?.name || 'Anonymous',
+        text: review.text || review.review_text || review.comment || review.message || '',
+        rating: review.rating || review.stars || review.score || null,
+        date: review.date || review.created_at || review.review_date || null,
+        photos: review.photos || review.images || review.photo_urls || [],
+        isVerified: review.verified || review.is_verified || review.verified_purchase || false,
+        profilePicture: review.profilePicture || review.profile_picture || review.avatar || review.customer?.avatar || null,
+        videoUrl: review.videoUrl || review.video_url || review.video || null,
+        productImage: review.productImage || review.product_image || review.product?.image || null,
+        productName: review.productName || review.product_name || review.product?.name || null,
+      })) : [];
+      
+      return {
+        productId: cleanProductId,
+        productTitle: looxWidgetData.productTitle || '',
+        productHandle: looxWidgetData.productHandle || '',
+        count: looxWidgetData.count || looxWidgetData.total || transformedReviews.length,
+        averageRating: looxWidgetData.averageRating || looxWidgetData.rating || 0,
+        reviews: transformedReviews
+      };
     }
     
     const query = `
