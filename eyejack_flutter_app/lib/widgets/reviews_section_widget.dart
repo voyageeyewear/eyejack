@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cached_network_image/cached_network_image.dart';
+import 'package:webview_flutter/webview_flutter.dart';
 import '../models/review_model.dart';
 
 class ReviewsSectionWidget extends StatelessWidget {
@@ -177,6 +178,7 @@ class _ExpandedReviewsSection extends StatelessWidget {
           _ReviewsList(
             reviews: reviewsData.reviews,
             productTitle: productTitle,
+            productId: reviewsData.productId,
           ),
         ],
       ),
@@ -187,15 +189,25 @@ class _ExpandedReviewsSection extends StatelessWidget {
 class _ReviewsList extends StatelessWidget {
   final List<Review> reviews;
   final String productTitle;
+  final String? productId; // Add productId for Loox widget fallback
 
   const _ReviewsList({
     required this.reviews,
     required this.productTitle,
+    this.productId,
   });
 
   @override
   Widget build(BuildContext context) {
+    // If reviews are empty but we have a product ID, try to load Loox widget in WebView
+    // This happens when Loox stores reviews on their servers and loads via iframe
     if (reviews.isEmpty) {
+      // If we have a product ID, show Loox widget in WebView
+      if (productId != null && productId!.isNotEmpty && productId! != '0') {
+        return _LooxWidgetWebView(productId: productId!);
+      }
+      
+      // Otherwise show default message
       return Padding(
         padding: const EdgeInsets.all(16),
         child: Text(
