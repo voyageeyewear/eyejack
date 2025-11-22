@@ -1188,7 +1188,9 @@ class _CollectionScreenState extends State<CollectionScreen> {
                       Row(
                         children: [
                           ...List.generate(5, (index) {
-                            final rating = product.reviews?.rating ?? 5.0;
+                            // Use real Loox review data from _reviewCounts map
+                            final reviewCount = _reviewCounts[product.id.replaceAll('gid://shopify/Product/', '')];
+                            final rating = reviewCount?.rating ?? product.reviews?.rating ?? 5.0;
                             return Icon(
                               index < rating.floor() ? Icons.star : Icons.star_border,
                               size: 12, // Slightly smaller
@@ -1197,7 +1199,13 @@ class _CollectionScreenState extends State<CollectionScreen> {
                           }),
                           const SizedBox(width: 4),
                           Text(
-                            '${product.reviews?.rating.toStringAsFixed(1) ?? '5.0'} (${product.reviews?.count ?? 1})',
+                            () {
+                              // Use real Loox review data from _reviewCounts map
+                              final reviewCount = _reviewCounts[product.id.replaceAll('gid://shopify/Product/', '')];
+                              final rating = reviewCount?.rating ?? product.reviews?.rating ?? 5.0;
+                              final count = reviewCount?.count ?? product.reviews?.count ?? 1;
+                              return '${rating.toStringAsFixed(1)} ($count)';
+                            }(),
                             style: const TextStyle(
                               fontSize: 10, // Slightly smaller
                               color: Colors.black87,

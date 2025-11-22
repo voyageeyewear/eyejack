@@ -334,7 +334,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       ),
                       const SizedBox(height: 8),
 
-                      // Review Stars
+                      // Review Stars (clickable, shows real Loox data)
                       _buildReviewStars(),
                       const SizedBox(height: 16),
 
@@ -1232,28 +1232,51 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   // NEW HELPER METHODS FOR FIRELENS-STYLE DESIGN
 
   Widget _buildReviewStars() {
-    final rating = widget.product.reviews?.rating ?? 5.0;
-    final count = widget.product.reviews?.count ?? 1;
+    // Use real Loox review data if available, otherwise fall back to product reviews
+    final rating = _productReviews?.averageRating ?? widget.product.reviews?.rating ?? 5.0;
+    final count = _productReviews?.count ?? widget.product.reviews?.count ?? 1;
+    
+    // Get product ID for WebView
+    String productId = widget.product.id;
+    if (productId.contains('gid://shopify/Product/')) {
+      productId = productId.replaceAll('gid://shopify/Product/', '');
+    }
 
-    return Row(
-      children: [
-        ...List.generate(5, (index) {
-          return Icon(
-            index < rating.floor() ? Icons.star : Icons.star_border,
-            size: 18,
-            color: const Color(0xFFFFC107),
-          );
-        }),
-        const SizedBox(width: 8),
-        Text(
-          '$rating (${count} reviews)',
-          style: TextStyle(
-            fontSize: 14,
-            color: Colors.grey[700],
-            fontWeight: FontWeight.w500,
+    return GestureDetector(
+      onTap: () {
+        // Open full-screen reviews WebView page
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => _FullScreenReviewsPage(
+              productId: productId,
+              productTitle: widget.product.title,
+              rating: rating,
+              count: count,
+            ),
           ),
-        ),
-      ],
+        );
+      },
+      child: Row(
+        children: [
+          ...List.generate(5, (index) {
+            return Icon(
+              index < rating.floor() ? Icons.star : Icons.star_border,
+              size: 18,
+              color: const Color(0xFFFFC107),
+            );
+          }),
+          const SizedBox(width: 8),
+          Text(
+            '$rating (${count} ${count == 1 ? 'review' : 'reviews'})',
+            style: TextStyle(
+              fontSize: 14,
+              color: Colors.grey[700],
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
     );
   }
 
