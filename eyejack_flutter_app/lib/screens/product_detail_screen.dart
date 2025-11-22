@@ -401,7 +401,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     child: Center(child: CircularProgressIndicator()),
                   )
                 else if (_productReviews != null)
-                  _buildReviewsSection(),
+                  Builder(
+                    builder: (context) {
+                      return _buildReviewsSection();
+                    },
+                  ),
 
                 const SizedBox(height: 8),
 
@@ -1198,6 +1202,44 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   }
 
   // NEW HELPER METHODS FOR FIRELENS-STYLE DESIGN
+
+  Widget _buildReviewsSection() {
+    if (_productReviews == null) {
+      return const SizedBox.shrink();
+    }
+    
+    debugPrint('🎨 Building ReviewsSectionWidget - Count: ${_productReviews!.count}, Reviews: ${_productReviews!.reviews.length}');
+    debugPrint('🎨 ProductReviews productId: ${_productReviews!.productId}');
+    debugPrint('🎨 Product ID (raw): ${widget.product.id}');
+    
+    // Ensure productId is set in ProductReviews if missing (without mutating state)
+    review_models.ProductReviews reviewsData = _productReviews!;
+    if (reviewsData.productId.isEmpty) {
+      final cleanProductId = widget.product.id.replaceAll('gid://shopify/Product/', '');
+      debugPrint('🔧 Setting productId in ProductReviews: $cleanProductId');
+      reviewsData = review_models.ProductReviews(
+        productId: cleanProductId,
+        productTitle: reviewsData.productTitle,
+        productHandle: reviewsData.productHandle,
+        count: reviewsData.count,
+        averageRating: reviewsData.averageRating,
+        reviews: reviewsData.reviews,
+      );
+    }
+    
+    // Show reviews section if we have count > 0 OR if we have review objects
+    if (reviewsData.count > 0 || reviewsData.reviews.isNotEmpty) {
+      return ReviewsSectionWidget(
+        reviewsData: reviewsData,
+        productTitle: widget.product.title,
+        isCollapsible: true,
+        initiallyExpanded: false,
+      );
+    } else {
+      debugPrint('⚠️ Reviews data exists but count is 0 and reviews array is empty');
+      return const SizedBox.shrink();
+    }
+  }
 
   Widget _buildReviewStars() {
     // Use real Loox review data if available, otherwise fall back to product reviews
