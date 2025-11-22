@@ -175,11 +175,13 @@ class _ExpandedReviewsSection extends StatelessWidget {
             ),
           ),
           Divider(height: 1, color: Colors.grey.shade200),
-          // Reviews list
-          _ReviewsList(
-            reviews: reviewsData.reviews,
-            productTitle: productTitle,
-            productId: reviewsData.productId,
+          // Reviews list - Use Expanded for WebView to fill space
+          Expanded(
+            child: _ReviewsList(
+              reviews: reviewsData.reviews,
+              productTitle: productTitle,
+              productId: reviewsData.productId,
+            ),
           ),
         ],
       ),
@@ -555,7 +557,8 @@ class _LooxWidgetWebViewState extends State<_LooxWidgetWebView> {
       cleanProductId = cleanProductId.replaceAll('gid://shopify/Product/', '');
     }
     
-    final looxWidgetUrl = 'https://loox.io/widget/$looxMerchantId/reviews/$cleanProductId?limit=20';
+    // Load all reviews (no limit) and hide the duplicate header
+    final looxWidgetUrl = 'https://loox.io/widget/$looxMerchantId/reviews/$cleanProductId';
     debugPrint('🌐 Loading Loox widget URL: $looxWidgetUrl');
     debugPrint('🌐 Clean productId: $cleanProductId');
     
@@ -571,6 +574,33 @@ class _LooxWidgetWebViewState extends State<_LooxWidgetWebView> {
           },
           onPageFinished: (String url) {
             debugPrint('🌐 WebView page finished: $url');
+            // Inject CSS to hide the duplicate header/rating summary
+            _controller.runJavaScript('''
+              (function() {
+                // Hide the Loox rating summary header (we already show it)
+                var style = document.createElement('style');
+                style.innerHTML = `
+                  .loox-rating, 
+                  .loox-rating-content,
+                  [class*="loox-rating"],
+                  [id*="loox-rating"] {
+                    display: none !important;
+                  }
+                  /* Hide filter button if present */
+                  [class*="filter"],
+                  button[class*="filter"] {
+                    display: none !important;
+                  }
+                  /* Make reviews container scrollable within our fixed height */
+                  body {
+                    margin: 0;
+                    padding: 0;
+                    overflow-y: auto;
+                  }
+                `;
+                document.head.appendChild(style);
+              })();
+            ''');
             setState(() {
               _isLoading = false;
             });
@@ -586,8 +616,10 @@ class _LooxWidgetWebViewState extends State<_LooxWidgetWebView> {
 
   @override
   Widget build(BuildContext context) {
+    // Use a very large height to show all reviews without scrolling
+    // The WebView will handle internal scrolling if needed
     return Container(
-      height: 600, // Fixed height for reviews widget
+      height: 2000, // Large height to show all reviews
       margin: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: Colors.white,
