@@ -7,6 +7,7 @@ import '../models/collection_model.dart';
 import '../models/section_model.dart';
 import '../models/collection_banner_model.dart';
 import '../models/collection_settings_model.dart';
+import '../models/review_model.dart' as review_models;
 
 class ApiService {
   // Fetch theme sections
@@ -448,6 +449,122 @@ class ApiService {
       debugPrint('❌ Error fetching collection settings: $e');
       debugPrint('   Using default settings');
       return CollectionPageSettings.defaults();
+    }
+  }
+
+  // Loox Reviews API methods
+  
+  /// Fetch all reviews for a product
+  Future<review_models.ProductReviews> getProductReviews(String productId) async {
+    try {
+      // Clean product ID (remove gid:// prefix if present)
+      String cleanProductId = productId;
+      if (cleanProductId.contains('gid://shopify/Product/')) {
+        cleanProductId = cleanProductId.replaceAll('gid://shopify/Product/', '');
+      }
+      
+      final url = '${ApiConfig.baseUrl}${ApiConfig.looxProductReviews}/$cleanProductId/reviews';
+      debugPrint('🔄 Fetching Loox reviews for product: $cleanProductId');
+      
+      final response = await http.get(
+        Uri.parse(url),
+      ).timeout(ApiConfig.timeout);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        debugPrint('✅ Loox reviews loaded: ${data['data']['count']} reviews');
+        return review_models.ProductReviews.fromJson(data['data']);
+      } else {
+        debugPrint('⚠️ Failed to load reviews: ${response.statusCode}');
+        // Return empty reviews instead of throwing
+        return review_models.ProductReviews(
+          productId: cleanProductId,
+          productTitle: '',
+          productHandle: '',
+          count: 0,
+          averageRating: 0.0,
+          reviews: [],
+        );
+      }
+    } catch (e) {
+      debugPrint('❌ Error fetching product reviews: $e');
+      // Return empty reviews instead of throwing
+      return review_models.ProductReviews(
+        productId: productId,
+        productTitle: '',
+        productHandle: '',
+        count: 0,
+        averageRating: 0.0,
+        reviews: [],
+      );
+    }
+  }
+
+  /// Fetch review count for a single product (lightweight)
+  Future<review_models.ReviewCount> getProductReviewCount(String productId) async {
+    try {
+      // Clean product ID
+      String cleanProductId = productId;
+      if (cleanProductId.contains('gid://shopify/Product/')) {
+        cleanProductId = cleanProductId.replaceAll('gid://shopify/Product/', '');
+      }
+      
+      final url = '${ApiConfig.baseUrl}${ApiConfig.looxProductReviewCount}/$cleanProductId/review-count';
+      
+      final response = await http.get(
+        Uri.parse(url),
+      ).timeout(ApiConfig.timeout);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        return review_models.ReviewCount.fromJson(data['data']);
+      } else {
+        return review_models.ReviewCount(count: 0, rating: 0.0);
+      }
+    } catch (e) {
+      debugPrint('❌ Error fetching review count: $e');
+      return review_models.ReviewCount(count: 0, rating: 0.0);
+    }
+  }
+
+  /// Fetch review counts for multiple products (for collection screen)
+  Future<Map<String, review_models.ReviewCount>> getBulkReviewCounts(List<String> productIds) async {
+    try {
+      // Clean product IDs
+      final cleanProductIds = productIds.map((id) {
+        if (id.contains('gid://shopify/Product/')) {
+          return id.replaceAll('gid://shopify/Product/', '');
+        }
+        return id;
+      }).toList();
+      
+      final url = '${ApiConfig.baseUrl}${ApiConfig.looxBulkReviewCounts}';
+      debugPrint('🔄 Fetching bulk review counts for ${cleanProductIds.length} products');
+      
+      final response = await http.post(
+        Uri.parse(url),
+        headers: {'Content-Type': 'application/json'},
+        body: json.encode({'productIds': cleanProductIds}),
+      ).timeout(ApiConfig.timeout);
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final countsMap = data['data'] as Map<String, dynamic>;
+        
+        final result = <String, review_models.ReviewCount>{};
+        countsMap.forEach((productId, countData) {
+          result[productId] = review_models.ReviewCount.fromJson(countData as Map<String, dynamic>);
+        });
+        
+        debugPrint('✅ Fetched review counts for ${result.length} products');
+        return result;
+      } else {
+        debugPrint('⚠️ Failed to load bulk review counts: ${response.statusCode}');
+        return {};
+      }
+    } catch (e) {
+      debugPrint('❌ Error fetching bulk review counts: $e');
+      return {};
     }
   }
 }

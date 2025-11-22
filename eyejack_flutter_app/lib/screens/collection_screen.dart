@@ -13,6 +13,7 @@ import '../screens/product_detail_screen.dart';
 import '../screens/kp_checkout_screen.dart';
 import '../widgets/collection_banner_widget.dart';
 import '../widgets/cart_drawer.dart';
+import '../models/review_model.dart' as review_models;
 
 class CollectionScreen extends StatefulWidget {
   final Collection collection;
@@ -33,6 +34,7 @@ class _CollectionScreenState extends State<CollectionScreen> {
   bool _isGridView = true;
   String _sortBy = 'featured'; // featured, price_asc, price_desc, name_asc, name_desc
   int _cartCount = 0; // Track cart item count
+  Map<String, review_models.ReviewCount> _reviewCounts = {}; // Product ID -> Review Count
   
   // Pagination states
   int _currentPage = 1;
@@ -64,6 +66,74 @@ class _CollectionScreenState extends State<CollectionScreen> {
     } catch (e) {
       debugPrint('Error loading cart count: $e');
     }
+  }
+
+  Future<void> _loadReviewCounts(List<Product> products) async {
+    try {
+      if (products.isEmpty) return;
+      
+      // Extract product IDs (clean them)
+      final productIds = products.map((p) {
+        String id = p.id;
+        if (id.contains('gid://shopify/Product/')) {
+          id = id.replaceAll('gid://shopify/Product/', '');
+        }
+        return id;
+      }).toList();
+      
+      debugPrint('⭐ Fetching review counts for ${productIds.length} products...');
+      
+      final reviewCounts = await ApiService().getBulkReviewCounts(productIds);
+      
+      if (mounted) {
+        setState(() {
+          _reviewCounts = reviewCounts;
+        });
+        debugPrint('✅ Loaded review counts for ${reviewCounts.length} products');
+      }
+    } catch (e) {
+      debugPrint('⚠️ Error loading review counts: $e');
+      // Don't show error to user, just continue without review counts
+    }
+  }
+  
+  review_models.ReviewCount? _getReviewCountForProduct(Product product) {
+    String productId = product.id;
+    if (productId.contains('gid://shopify/Product/')) {
+      productId = productId.replaceAll('gid://shopify/Product/', '');
+    }
+    return _reviewCounts[productId];
+  }
+
+  Widget _buildReviewDisplay(Product product) {
+    final reviewCount = _getReviewCountForProduct(product);
+    final count = reviewCount?.count ?? product.reviews?.count ?? 0;
+    final rating = reviewCount?.rating ?? product.reviews?.rating ?? 0.0;
+    
+    if (count == 0 && rating == 0) {
+      return const SizedBox.shrink();
+    }
+    
+    return Row(
+      children: [
+        ...List.generate(5, (index) {
+          final starRating = rating.round();
+          return Icon(
+            index < starRating ? Icons.star : Icons.star_border,
+            size: 14,
+            color: const Color(0xFFFFC107),
+          );
+        }),
+        const SizedBox(width: 4),
+        Text(
+          '${rating.toStringAsFixed(1)} ($count)',
+          style: const TextStyle(
+            fontSize: 11,
+            color: Colors.black87,
+          ),
+        ),
+      ],
+    );
   }
   
   void _showCartDrawer() {
@@ -269,6 +339,9 @@ class _CollectionScreenState extends State<CollectionScreen> {
       debugPrint('   _hasMore state: $_hasMore');
       debugPrint('   _currentPage: $_currentPage');
       debugPrint('   Should show button: ${_hasMore || _isLoadingMore}');
+      
+      // Fetch review counts for products
+      _loadReviewCounts(products);
     } catch (e) {
       setState(() {
         _error = e.toString();
@@ -308,6 +381,9 @@ class _CollectionScreenState extends State<CollectionScreen> {
       });
       
       debugPrint('📦 Loaded page $nextPage: ${newProducts.length} products, total: ${_products!.length}, hasMore: $hasMore');
+      
+      // Fetch review counts for new products
+      _loadReviewCounts(newProducts);
     } catch (e) {
       debugPrint('❌ Error loading more products: $e');
       setState(() {
@@ -1406,26 +1482,8 @@ class _CollectionScreenState extends State<CollectionScreen> {
                       ),
                     ),
                     const SizedBox(height: 6),
-                    Row(
-                      children: [
-                        ...List.generate(5, (index) {
-                          final rating = product.reviews?.rating ?? 5.0;
-                          return Icon(
-                            index < rating.floor() ? Icons.star : Icons.star_border,
-                            size: 14,
-                            color: const Color(0xFFFFC107),
-                          );
-                        }),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${product.reviews?.rating.toStringAsFixed(1) ?? '5.0'} (${product.reviews?.count ?? 1})',
-                          style: const TextStyle(
-                            fontSize: 11,
-                            color: Colors.black87,
-                          ),
-                        ),
-                      ],
-                    ),
+                    // Review badge with real Loox data
+                    _buildReviewDisplay(product),
                     const SizedBox(height: 8),
                     if (hasDiscount && originalPrice > 0) ...[
                       Text(

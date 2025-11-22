@@ -37,5 +37,10 @@ router.post('/checkout/gokwik', shopifyController.createGokwikCheckout);
 // Lens options endpoint (fetch lens data from product metafields)
 router.get('/lens-options', shopifyController.getLensOptions);
 
+// Loox Reviews endpoints
+router.get('/loox/product/:productId/reviews', shopifyController.getProductReviews);
+router.get('/loox/product/:productId/review-count', shopifyController.getProductReviewCount);
+router.post('/loox/products/review-counts', shopifyController.getBulkReviewCounts);
+
 module.exports = router;
 

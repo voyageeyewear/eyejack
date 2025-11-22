@@ -16,6 +16,8 @@ import '../widgets/product_specs_widget.dart';
 import '../widgets/product_faq_widget.dart';
 import '../widgets/product_video_widget.dart';
 import '../widgets/color_swatch_widget.dart';
+import '../widgets/reviews_section_widget.dart';
+import '../models/review_model.dart' as review_models;
 import 'collection_screen.dart';
 
 class ProductDetailScreen extends StatefulWidget {
@@ -36,6 +38,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   bool _isDescriptionExpanded = false;
   bool _isFrameMeasurementsExpanded = false;
   bool _isProductHighlightsExpanded = false;
+  review_models.ProductReviews? _productReviews;
+  bool _reviewsLoading = false;
 
   @override
   void initState() {
@@ -53,6 +57,32 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         });
       }
     });
+    
+    // Load reviews
+    _loadReviews();
+  }
+
+  Future<void> _loadReviews() async {
+    setState(() {
+      _reviewsLoading = true;
+    });
+    
+    try {
+      final reviews = await ApiService().getProductReviews(widget.product.id);
+      if (mounted) {
+        setState(() {
+          _productReviews = reviews;
+          _reviewsLoading = false;
+        });
+      }
+    } catch (e) {
+      debugPrint('Error loading reviews: $e');
+      if (mounted) {
+        setState(() {
+          _reviewsLoading = false;
+        });
+      }
+    }
   }
 
   @override
@@ -346,6 +376,21 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
                 // Frame Measurements
                 _buildFrameMeasurements(),
+
+                const SizedBox(height: 8),
+
+                // Loox Reviews Section
+                if (_reviewsLoading)
+                  const Padding(
+                    padding: EdgeInsets.all(16),
+                    child: Center(child: CircularProgressIndicator()),
+                  )
+                else if (_productReviews != null && (_productReviews!.count > 0 || _productReviews!.reviews.isNotEmpty))
+                  ReviewsSectionWidget(
+                    reviewsData: _productReviews!,
+                    isCollapsible: true,
+                    initiallyExpanded: false,
+                  ),
 
                 const SizedBox(height: 8),
 

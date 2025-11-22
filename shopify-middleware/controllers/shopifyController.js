@@ -1,4 +1,5 @@
 const shopifyService = require('../services/shopifyService');
+const looxService = require('../services/looxService');
 const { AppSection } = require('../models');
 
 // Get theme sections for homepage (NOW READS FROM POSTGRESQL!)
@@ -351,6 +352,78 @@ exports.getLensOptions = async (req, res, next) => {
     });
   } catch (error) {
     next(error);
+  }
+};
+
+// Loox Reviews endpoints
+exports.getProductReviews = async (req, res, next) => {
+  try {
+    const { productId } = req.params;
+    if (!productId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Product ID is required'
+      });
+    }
+    
+    const reviewsData = await looxService.getProductReviews(productId);
+    res.json({
+      success: true,
+      data: reviewsData
+    });
+  } catch (error) {
+    console.error('Error fetching product reviews:', error);
+    next(error);
+  }
+};
+
+exports.getProductReviewCount = async (req, res, next) => {
+  try {
+    const { productId } = req.params;
+    if (!productId) {
+      return res.status(400).json({
+        success: false,
+        error: 'Product ID is required'
+      });
+    }
+    
+    const reviewCount = await looxService.getProductReviewCount(productId);
+    res.json({
+      success: true,
+      data: reviewCount
+    });
+  } catch (error) {
+    console.error('Error fetching review count:', error);
+    // Return default values instead of error
+    res.json({
+      success: true,
+      data: { count: 0, rating: 0 }
+    });
+  }
+};
+
+exports.getBulkReviewCounts = async (req, res, next) => {
+  try {
+    const { productIds } = req.body;
+    if (!productIds || !Array.isArray(productIds) || productIds.length === 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Product IDs array is required'
+      });
+    }
+    
+    const reviewCounts = await looxService.getBulkReviewCounts(productIds);
+    res.json({
+      success: true,
+      data: reviewCounts
+    });
+  } catch (error) {
+    console.error('Error fetching bulk review counts:', error);
+    // Return empty object instead of error
+    res.json({
+      success: true,
+      data: {}
+    });
   }
 };
 

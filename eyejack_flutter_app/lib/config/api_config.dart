@@ -9,6 +9,11 @@ class ApiConfig {
   static const String shopInfo = '/api/shopify/shop';
   static const String search = '/api/shopify/search';
   
+  // Loox Reviews endpoints
+  static const String looxProductReviews = '/api/shopify/loox/product';
+  static const String looxProductReviewCount = '/api/shopify/loox/product';
+  static const String looxBulkReviewCounts = '/api/shopify/loox/products/review-counts';
+  
   // Timeout duration
   static const Duration timeout = Duration(seconds: 30);
 }
