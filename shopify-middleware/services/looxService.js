@@ -623,6 +623,10 @@ exports.getProductReviews = async (productId) => {
           date: review.date || review.created_at || review.review_date || null,
           photos: review.photos || review.images || review.photo_urls || [],
           isVerified: review.verified || review.is_verified || review.verified_purchase || false,
+          profilePicture: review.profilePicture || review.profile_picture || review.avatar || review.customer?.avatar || null,
+          videoUrl: review.videoUrl || review.video_url || review.video || null,
+          productImage: review.productImage || review.product_image || review.product?.image || null,
+          productName: review.productName || review.product_name || review.product?.name || null,
         }));
       } else if (reviewsData.reviews && Array.isArray(reviewsData.reviews)) {
         reviews = reviewsData.reviews.map((review, index) => ({
@@ -633,6 +637,10 @@ exports.getProductReviews = async (productId) => {
           date: review.date || review.created_at || review.review_date || null,
           photos: review.photos || review.images || review.photo_urls || [],
           isVerified: review.verified || review.is_verified || review.verified_purchase || false,
+          profilePicture: review.profilePicture || review.profile_picture || review.avatar || review.customer?.avatar || null,
+          videoUrl: review.videoUrl || review.video_url || review.video || null,
+          productImage: review.productImage || review.product_image || review.product?.image || null,
+          productName: review.productName || review.product_name || review.product?.name || null,
         }));
       }
     }
