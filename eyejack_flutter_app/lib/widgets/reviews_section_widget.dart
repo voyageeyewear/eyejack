@@ -548,24 +548,36 @@ class _LooxWidgetWebViewState extends State<_LooxWidgetWebView> {
   void _initializeWebView() {
     // Loox widget URL format: https://loox.io/widget/{MERCHANT_ID}/reviews/{PRODUCT_ID}
     const looxMerchantId = 'PmGdDSBYpW'; // Your Loox merchant/widget ID from website
-    final looxWidgetUrl = 'https://loox.io/widget/$looxMerchantId/reviews/${widget.productId}?limit=20';
+    
+    // Clean product ID (remove gid:// prefix if present)
+    String cleanProductId = widget.productId;
+    if (cleanProductId.contains('gid://shopify/Product/')) {
+      cleanProductId = cleanProductId.replaceAll('gid://shopify/Product/', '');
+    }
+    
+    final looxWidgetUrl = 'https://loox.io/widget/$looxMerchantId/reviews/$cleanProductId?limit=20';
+    debugPrint('🌐 Loading Loox widget URL: $looxWidgetUrl');
+    debugPrint('🌐 Clean productId: $cleanProductId');
     
     _controller = WebViewController()
       ..setJavaScriptMode(JavaScriptMode.unrestricted)
       ..setNavigationDelegate(
         NavigationDelegate(
           onPageStarted: (String url) {
+            debugPrint('🌐 WebView page started: $url');
             setState(() {
               _isLoading = true;
             });
           },
           onPageFinished: (String url) {
+            debugPrint('🌐 WebView page finished: $url');
             setState(() {
               _isLoading = false;
             });
           },
           onWebResourceError: (WebResourceError error) {
-            debugPrint('Loox widget WebView error: ${error.description}');
+            debugPrint('❌ Loox widget WebView error: ${error.description}');
+            debugPrint('❌ Error code: ${error.errorCode}, Error type: ${error.errorType}');
           },
         ),
       )
