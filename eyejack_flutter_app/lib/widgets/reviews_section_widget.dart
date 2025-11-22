@@ -71,6 +71,7 @@ class _CollapsibleReviewsSectionState extends State<_CollapsibleReviewsSection> 
         borderRadius: BorderRadius.circular(12),
       ),
       child: Column(
+        mainAxisSize: MainAxisSize.min,
         children: [
           // Header - Rating Summary
           InkWell(
@@ -114,14 +115,14 @@ class _CollapsibleReviewsSectionState extends State<_CollapsibleReviewsSection> 
             ),
           ),
           // Reviews list (when expanded)
-          if (_isExpanded)
+          if (_isExpanded) ...[
             Divider(height: 1, color: Colors.grey.shade200),
-          if (_isExpanded)
             _ReviewsList(
               reviews: widget.reviewsData.reviews,
               productTitle: widget.productTitle,
               productId: widget.reviewsData.productId,
             ),
+          ],
         ],
       ),
     );
@@ -557,8 +558,8 @@ class _LooxWidgetWebViewState extends State<_LooxWidgetWebView> {
       cleanProductId = cleanProductId.replaceAll('gid://shopify/Product/', '');
     }
     
-    // Load all reviews (no limit) and hide the duplicate header
-    final looxWidgetUrl = 'https://loox.io/widget/$looxMerchantId/reviews/$cleanProductId';
+    // Load all reviews (no limit parameter = loads all) and hide the duplicate header
+    final looxWidgetUrl = 'https://loox.io/widget/$looxMerchantId/reviews/$cleanProductId?limit=999';
     debugPrint('🌐 Loading Loox widget URL: $looxWidgetUrl');
     debugPrint('🌐 Clean productId: $cleanProductId');
     
