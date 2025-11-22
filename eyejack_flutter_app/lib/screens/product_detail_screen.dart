@@ -19,6 +19,7 @@ import '../widgets/color_swatch_widget.dart';
 import '../widgets/reviews_section_widget.dart';
 import '../models/review_model.dart' as review_models;
 import 'collection_screen.dart';
+import 'package:webview_flutter/webview_flutter.dart' as webview;
 
 class ProductDetailScreen extends StatefulWidget {
   final Product product;
@@ -1844,6 +1845,168 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+// Full-screen reviews page with WebView
+class _FullScreenReviewsPage extends StatefulWidget {
+  final String productId;
+  final String productTitle;
+  final double rating;
+  final int count;
+
+  const _FullScreenReviewsPage({
+    required this.productId,
+    required this.productTitle,
+    required this.rating,
+    required this.count,
+  });
+
+  @override
+  State<_FullScreenReviewsPage> createState() => _FullScreenReviewsPageState();
+}
+
+class _FullScreenReviewsPageState extends State<_FullScreenReviewsPage> {
+  late webview.WebViewController _controller;
+  bool _isLoading = true;
+
+  @override
+  void initState() {
+    super.initState();
+    _initializeWebView();
+  }
+
+  void _initializeWebView() {
+    const looxMerchantId = 'PmGdDSBYpW';
+    final looxWidgetUrl = 'https://loox.io/widget/$looxMerchantId/reviews/${widget.productId}?limit=999';
+    
+    debugPrint('🌐 Loading full-screen Loox reviews for productId: ${widget.productId}');
+    debugPrint('🌐 URL: $looxWidgetUrl');
+
+    _controller = webview.WebViewController()
+      ..setJavaScriptMode(webview.JavascriptMode.unrestricted)
+      ..setNavigationDelegate(
+        webview.NavigationDelegate(
+          onPageStarted: (String url) {
+            setState(() {
+              _isLoading = true;
+            });
+          },
+          onPageFinished: (String url) {
+            // Inject CSS to hide duplicate header, filter, and "Write a review" button
+            _controller.runJavaScript('''
+              (function() {
+                var style = document.createElement('style');
+                style.innerHTML = `
+                  /* Hide duplicate rating header */
+                  .loox-rating, 
+                  .loox-rating-content,
+                  [class*="loox-rating"],
+                  [id*="loox-rating"],
+                  [class*="rating-summary"],
+                  [id*="rating-summary"] {
+                    display: none !important;
+                  }
+                  /* Hide filter button */
+                  [class*="filter"],
+                  button[class*="filter"],
+                  [class*="loox-filter"] {
+                    display: none !important;
+                  }
+                  /* Hide "Write a review" button */
+                  [class*="write-review"],
+                  button[class*="write-review"],
+                  a[class*="write-review"],
+                  [class*="write_review"] {
+                    display: none !important;
+                  }
+                  /* Remove any top padding/margin */
+                  body {
+                    margin: 0 !important;
+                    padding: 0 !important;
+                  }
+                `;
+                document.head.appendChild(style);
+                
+                // Also try to hide elements by text content after page loads
+                setTimeout(function() {
+                  var allElements = document.querySelectorAll('*');
+                  allElements.forEach(function(el) {
+                    var text = el.textContent || '';
+                    if (text.includes('Write a review') || text.includes('write a review')) {
+                      el.style.display = 'none';
+                    }
+                  });
+                  
+                  var elementsToHide = document.querySelectorAll(
+                    '.loox-rating, [class*="loox-rating"], [id*="loox-rating"], ' +
+                    '[class*="filter"], button[class*="filter"], ' +
+                    '[class*="write-review"], button[class*="write-review"], a[class*="write-review"]'
+                  );
+                  elementsToHide.forEach(function(el) {
+                    el.style.display = 'none';
+                  });
+                }, 1000);
+              })();
+            ''');
+            setState(() {
+              _isLoading = false;
+            });
+          },
+          onWebResourceError: (webview.WebResourceError error) {
+            debugPrint('❌ Loox WebView error: ${error.description}');
+          },
+        ),
+      )
+      ..loadRequest(Uri.parse(looxWidgetUrl));
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              widget.productTitle,
+              style: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
+            ),
+            Row(
+              children: [
+                ...List.generate(5, (index) {
+                  return Icon(
+                    index < widget.rating.floor() ? Icons.star : Icons.star_border,
+                    size: 14,
+                    color: const Color(0xFFFFC107),
+                  );
+                }),
+                const SizedBox(width: 4),
+                Text(
+                  '${widget.rating.toStringAsFixed(1)} (${widget.count} ${widget.count == 1 ? 'review' : 'reviews'})',
+                  style: const TextStyle(fontSize: 12),
+                ),
+              ],
+            ),
+          ],
+        ),
+        elevation: 0,
+      ),
+      body: Stack(
+        children: [
+          webview.WebViewWidget(controller: _controller),
+          if (_isLoading)
+            Container(
+              color: Colors.white,
+              child: const Center(
+                child: CircularProgressIndicator(),
+              ),
+            ),
+        ],
       ),
     );
   }
