@@ -44,6 +44,7 @@ class _CollapsibleReviewsSection extends StatefulWidget {
   final bool initiallyExpanded;
 
   const _CollapsibleReviewsSection({
+    super.key,
     required this.reviewsData,
     required this.productTitle,
     this.initiallyExpanded = false,
@@ -134,6 +135,7 @@ class _ExpandedReviewsSection extends StatelessWidget {
   final String productTitle;
 
   const _ExpandedReviewsSection({
+    super.key,
     required this.reviewsData,
     required this.productTitle,
   });
@@ -541,13 +543,23 @@ class _LooxWidgetWebView extends StatefulWidget {
 }
 
 class _LooxWidgetWebViewState extends State<_LooxWidgetWebView> {
-  late final WebViewController _controller;
+  WebViewController? _controller;
   bool _isLoading = true;
+  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
     _initializeWebView();
+  }
+
+  @override
+  void didUpdateWidget(_LooxWidgetWebView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    // Only reinitialize if productId changed
+    if (oldWidget.productId != widget.productId && !_isInitialized) {
+      _initializeWebView();
+    }
   }
 
   void _initializeWebView() {
@@ -576,9 +588,11 @@ class _LooxWidgetWebViewState extends State<_LooxWidgetWebView> {
         NavigationDelegate(
           onPageStarted: (String url) {
             debugPrint('🌐 WebView page started: $url');
-            setState(() {
-              _isLoading = true;
-            });
+            if (mounted) {
+              setState(() {
+                _isLoading = true;
+              });
+            }
           },
           onPageFinished: (String url) {
             debugPrint('🌐 WebView page finished: $url');
