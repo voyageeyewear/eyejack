@@ -575,31 +575,64 @@ class _LooxWidgetWebViewState extends State<_LooxWidgetWebView> {
           },
           onPageFinished: (String url) {
             debugPrint('🌐 WebView page finished: $url');
-            // Inject CSS to hide the duplicate header/rating summary
+            // Inject CSS to hide the duplicate header, filter button, and "Write a review" button
             _controller.runJavaScript('''
               (function() {
                 // Hide the Loox rating summary header (we already show it)
                 var style = document.createElement('style');
                 style.innerHTML = `
+                  /* Hide duplicate rating header */
                   .loox-rating, 
                   .loox-rating-content,
                   [class*="loox-rating"],
-                  [id*="loox-rating"] {
+                  [id*="loox-rating"],
+                  [class*="rating-summary"],
+                  [id*="rating-summary"] {
                     display: none !important;
                   }
-                  /* Hide filter button if present */
+                  /* Hide filter button */
                   [class*="filter"],
-                  button[class*="filter"] {
+                  button[class*="filter"],
+                  [class*="loox-filter"] {
                     display: none !important;
                   }
-                  /* Make reviews container scrollable within our fixed height */
+                  /* Hide "Write a review" button */
+                  [class*="write-review"],
+                  button[class*="write-review"],
+                  a[class*="write-review"],
+                  [class*="write_review"],
+                  button:contains("Write a review"),
+                  a:contains("Write a review") {
+                    display: none !important;
+                  }
+                  /* Remove any top padding/margin */
                   body {
-                    margin: 0;
-                    padding: 0;
-                    overflow-y: auto;
+                    margin: 0 !important;
+                    padding: 0 !important;
                   }
                 `;
                 document.head.appendChild(style);
+                
+                // Also try to hide elements by text content after page loads
+                setTimeout(function() {
+                  var allElements = document.querySelectorAll('*');
+                  allElements.forEach(function(el) {
+                    var text = el.textContent || '';
+                    if (text.includes('Write a review') || text.includes('write a review')) {
+                      el.style.display = 'none';
+                    }
+                  });
+                  
+                  // Hide elements by class/id
+                  var elementsToHide = document.querySelectorAll(
+                    '.loox-rating, [class*="loox-rating"], [id*="loox-rating"], ' +
+                    '[class*="filter"], button[class*="filter"], ' +
+                    '[class*="write-review"], button[class*="write-review"], a[class*="write-review"]'
+                  );
+                  elementsToHide.forEach(function(el) {
+                    el.style.display = 'none';
+                  });
+                }, 1000);
               })();
             ''');
             setState(() {
