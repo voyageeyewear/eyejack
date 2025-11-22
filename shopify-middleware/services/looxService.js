@@ -143,6 +143,7 @@ function parseLooxReviews(html) {
       const textPatterns = [
         /<div[^>]*class="[^"]*review[^"]*text[^"]*"[^>]*>(.*?)<\/div>/i,
         /<div[^>]*class="[^"]*comment[^"]*"[^>]*>(.*?)<\/div>/i,
+        /<p[^>]*class="[^"]*review[^"]*"[^>]*>(.*?)<\/p>/i,
         /<p[^>]*>(.*?)<\/p>/i,
         /"text"\s*:\s*"([^"]+)"/i,
         /"comment"\s*:\s*"([^"]+)"/i,
@@ -153,8 +154,8 @@ function parseLooxReviews(html) {
       for (const pattern of textPatterns) {
         const textMatch = reviewHtml.match(pattern);
         if (textMatch && textMatch[1]) {
-          const extractedText = textMatch[1].trim()
-            .replace(/<[^>]+>/g, ' ')
+          let extractedText = textMatch[1].trim()
+            .replace(/<[^>]+>/g, ' ') // Remove HTML tags
             .replace(/&nbsp;/g, ' ')
             .replace(/&amp;/g, '&')
             .replace(/&lt;/g, '<')
@@ -163,7 +164,20 @@ function parseLooxReviews(html) {
             .replace(/\\n/g, ' ')
             .replace(/\s+/g, ' ')
             .trim();
-          if (extractedText && extractedText.length > 10) { // Only use if substantial content
+          
+          // Filter out CSS code patterns
+          if (extractedText.includes('cursor:') || 
+              extractedText.includes('background-color:') || 
+              extractedText.includes('@media') || 
+              extractedText.includes('rgba(') ||
+              extractedText.includes('border-radius:') ||
+              extractedText.includes('pointer-events:') ||
+              extractedText.match(/^[a-z-]+:\s*[^;]+;?\s*$/i)) { // CSS property pattern
+            console.log(`⚠️ Skipping text - looks like CSS: ${extractedText.substring(0, 50)}`);
+            continue; // Skip this match, try next pattern
+          }
+          
+          if (extractedText && extractedText.length > 3) { // Reduced minimum length
             text = extractedText;
             break;
           }
