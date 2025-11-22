@@ -104,12 +104,32 @@ function parseLooxReviews(html) {
         /"customer_name"\s*:\s*"([^"]+)"/i,
       ];
       
-      let name = 'Anonymous';
+      let name = '';
       for (const pattern of namePatterns) {
         const nameMatch = reviewHtml.match(pattern);
         if (nameMatch && nameMatch[1]) {
-          name = nameMatch[1].trim().replace(/<[^>]+>/g, '');
-          if (name) break;
+          const extractedName = nameMatch[1].trim().replace(/<[^>]+>/g, '').replace(/&nbsp;/g, ' ').replace(/\s+/g, ' ').trim();
+          if (extractedName && extractedName.length > 0) {
+            name = extractedName;
+            break;
+          }
+        }
+      }
+      
+      // Try to extract from any strong/bold tags (common in review names)
+      if (!name) {
+        const strongMatch = reviewHtml.match(/<strong[^>]*>(.*?)<\/strong>/i);
+        if (strongMatch && strongMatch[1]) {
+          name = strongMatch[1].trim().replace(/<[^>]+>/g, '').trim();
+        }
+      }
+      
+      // Try extracting from any text before first colon or dash (common pattern)
+      if (!name) {
+        const textContent = reviewHtml.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+        const colonMatch = textContent.match(/^([^:]+?):/);
+        if (colonMatch && colonMatch[1] && colonMatch[1].trim().length > 0 && colonMatch[1].trim().length < 50) {
+          name = colonMatch[1].trim();
         }
       }
       
@@ -127,8 +147,41 @@ function parseLooxReviews(html) {
       for (const pattern of textPatterns) {
         const textMatch = reviewHtml.match(pattern);
         if (textMatch && textMatch[1]) {
-          text = textMatch[1].trim().replace(/<[^>]+>/g, '').replace(/\\n/g, ' ');
-          if (text) break;
+          const extractedText = textMatch[1].trim()
+            .replace(/<[^>]+>/g, ' ')
+            .replace(/&nbsp;/g, ' ')
+            .replace(/&amp;/g, '&')
+            .replace(/&lt;/g, '<')
+            .replace(/&gt;/g, '>')
+            .replace(/&quot;/g, '"')
+            .replace(/\\n/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+          if (extractedText && extractedText.length > 10) { // Only use if substantial content
+            text = extractedText;
+            break;
+          }
+        }
+      }
+      
+      // If no text found, try extracting all text content from the HTML
+      if (!text) {
+        const textContent = reviewHtml.replace(/<[^>]+>/g, ' ')
+          .replace(/&nbsp;/g, ' ')
+          .replace(/&amp;/g, '&')
+          .replace(/\s+/g, ' ')
+          .trim();
+        
+        // Remove name if we found it, to get just the review text
+        if (name && textContent.toLowerCase().startsWith(name.toLowerCase())) {
+          text = textContent.substring(name.length).trim().replace(/^[:\-\s]+/, '').trim();
+        } else {
+          text = textContent;
+        }
+        
+        // Only use if substantial (more than just "Anonymous" or empty)
+        if (text.length < 10 || text === 'Anonymous' || text.includes('No review')) {
+          text = '';
         }
       }
       
@@ -175,8 +228,12 @@ function parseLooxReviews(html) {
       // Extract verified badge
       const isVerified = /verified|verified.*purchase/i.test(reviewHtml);
       
-      // Only add review if we have at least name or text
-      if (name || text) {
+      // Only add review if we have actual content (not just defaults)
+      // Check if name is not 'Anonymous' and text is not empty/default
+      const hasActualName = name && name !== 'Anonymous' && name.trim().length > 0;
+      const hasActualText = text && text !== 'No review text available' && text.trim().length > 0;
+      
+      if (hasActualName || hasActualText) {
         reviews.push({
           id: `review-${index}`,
           name: name || 'Anonymous',
@@ -187,6 +244,8 @@ function parseLooxReviews(html) {
           isVerified: isVerified
         });
         console.log(`✅ Parsed review ${index + 1}: ${name}, text length: ${text.length}, rating: ${rating}`);
+      } else {
+        console.log(`⚠️ Skipping review ${index + 1} - no actual content found. HTML sample: ${reviewHtml.substring(0, 200)}`);
       }
     });
     
